@@ -74,8 +74,11 @@ class BuiltInPrefixedHandlersTest extends TestCase
         foreach ($stack->getLocations() as $location) {
             self::assertInstanceOf(StackTraceFileLocation::class, $location);
             if ($location->getFilePath() === __FILE__) {
+                // The innermost frame of this file is the suspending call; the outer frames
+                // are the workflow methods that led to it.
                 $found = true;
                 self::assertSame(Workflow::class . '::await', $location->getFunctionName());
+                break;
             }
         }
 
