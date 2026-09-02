@@ -26,7 +26,11 @@ use Temporal\Internal\Workflow\ScopeContext;
 use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Tests\Unit\Framework\WorkerFactoryMock;
 use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Worker\FeatureFlags;
 use Temporal\Workflow;
+use Temporal\Workflow\CancellationScopeInterface;
+use Temporal\Workflow\ChildWorkflowOptions;
+use Temporal\Workflow\ParentClosePolicy;
 
 final class ScopeFiberContextTeardownTestCase extends TestCase
 {
@@ -142,6 +146,44 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         $this->flush();
 
         self::assertSame('recovered', $result);
+    }
+
+    public function testExecuteChildWorkflowIsInterruptedByScopeCancellationForAnAbandonedChild(): void
+    {
+        $flag = FeatureFlags::$cancelAbandonedChildWorkflows;
+        FeatureFlags::$cancelAbandonedChildWorkflows = false;
+        $scope = null;
+        $failure = null;
+
+        try {
+            $this->startRoot(static function () use (&$scope, &$failure): void {
+                $scope = Workflow::async(static function () use (&$failure): void {
+                    try {
+                        Workflow::executeChildWorkflow(
+                            'child',
+                            [],
+                            ChildWorkflowOptions::new()->withParentClosePolicy(ParentClosePolicy::Abandon),
+                        );
+                    } catch (CanceledFailure $e) {
+                        $failure = $e;
+                    }
+                });
+
+                Workflow::await(static fn(): bool => false);
+            });
+
+            // The child start commands have been sent to the server: they are no longer queued.
+            foreach ($this->factory->getQueue() as $command) {
+            }
+
+            self::assertInstanceOf(CancellationScopeInterface::class, $scope);
+            $scope->cancel();
+            $this->flush();
+
+            self::assertInstanceOf(CanceledFailure::class, $failure);
+        } finally {
+            FeatureFlags::$cancelAbandonedChildWorkflows = $flag;
+        }
     }
 
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void

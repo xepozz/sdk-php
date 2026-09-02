@@ -35,6 +35,11 @@ $suite = (static function (array $argv): ?string {
     return null;
 })($GLOBALS['argv'] ?? []);
 
+# No suite can be detected in a child process spawned for an isolated test (no arguments are passed)
+if ($suite === null) {
+    return;
+}
+
 $suite = \substr($suite, 0, \strpos($suite, '-') ?: \strlen($suite));
 
 # Include related bootstrap
