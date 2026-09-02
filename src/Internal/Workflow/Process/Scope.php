@@ -368,12 +368,13 @@ class Scope implements CancellationScopeInterface, Destroyable
                 return;
             }
 
-            if ($client->isQueued($request)) {
-                $client->cancel($request);
+            if (!$cancellable) {
+                // The command must reach the server even if the scope is cancelled meanwhile.
                 return;
             }
 
-            if (!$cancellable) {
+            if ($client->isQueued($request)) {
+                $client->cancel($request);
                 return;
             }
 

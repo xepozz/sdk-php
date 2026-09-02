@@ -256,7 +256,11 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     {
         return $this->callsInterceptor->with(
             fn(GetVersionInput $input): PromiseInterface => EncodedValues::decodePromise(
-                $this->request(new GetVersion($input->changeId, $input->minSupported, $input->maxSupported)),
+                // A version marker is not subject to scope cancellation (parity with the other SDKs).
+                $this->request(
+                    new GetVersion($input->changeId, $input->minSupported, $input->maxSupported),
+                    cancellable: false,
+                ),
                 Type::TYPE_ANY,
             ),
             /** @see WorkflowOutboundCallsInterceptor::getVersion() */
@@ -289,10 +293,14 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         }
 
         $last = fn(): PromiseInterface => EncodedValues::decodePromise(
-            $this->request(new SideEffect(
-                EncodedValues::fromValues([$value]),
-                $options === null ? [] : $this->services->marshaller->marshal($options),
-            )),
+            // A side effect marker is not subject to scope cancellation (parity with the other SDKs).
+            $this->request(
+                new SideEffect(
+                    EncodedValues::fromValues([$value]),
+                    $options === null ? [] : $this->services->marshaller->marshal($options),
+                ),
+                cancellable: false,
+            ),
             $returnType,
         );
         return $last();
