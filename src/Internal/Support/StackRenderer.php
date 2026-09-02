@@ -110,7 +110,6 @@ class StackRenderer
 
         /** @var list<StackTraceFileLocation> $locations */
         $locations = [];
-        $userFrameSeen = false;
 
         foreach ($stackTrace as $line) {
             $location = (new StackTraceFileLocation());
@@ -118,6 +117,7 @@ class StackRenderer
             $isInternal = false;
             $file = $line['file'] ?? null;
             if ($file !== null) {
+                $location->setFilePath($file);
                 foreach (self::$ignorePaths as $str) {
                     if (\str_starts_with($file, $str)) {
                         $isInternal = true;
@@ -126,13 +126,7 @@ class StackRenderer
                 }
             }
 
-            $exposeLocation = $isInternal || !$userFrameSeen;
-            if ($file !== null && $exposeLocation) {
-                $location->setFilePath($file);
-            }
-            if ($exposeLocation && isset($line['line'])) {
-                $location->setLine($line['line']);
-            }
+            isset($line['line']) and $location->setLine($line['line']);
 
             if (isset($line['function'])) {
                 $location->setFunctionName(\sprintf(
@@ -145,19 +139,17 @@ class StackRenderer
 
             $locations[] = $location->setInternalCode($isInternal);
 
-            if (!$isInternal && $file !== null) {
-                if (!\array_key_exists($file, $sources)) {
-                    try {
-                        $code = @\file_get_contents($file);
-                    } catch (\Throwable $e) {
-                        $code = \sprintf("Cannot access code.\n---\n%s", $e->getMessage());
-                    }
-
-                    $sources[$file] = (new StackTraceFileSlice())
-                        ->setLineOffset(0)
-                        ->setContent($code === false ? "Failed to read file." : $code);
+            // Store source code for non-internal files
+            if (!$isInternal && $file !== null && !\array_key_exists($file, $sources)) {
+                try {
+                    $code = @\file_get_contents($file);
+                } catch (\Throwable $e) {
+                    $code = \sprintf("Cannot access code.\n---\n%s", $e->getMessage());
                 }
-                $userFrameSeen = true;
+
+                $sources[$file] = (new StackTraceFileSlice())
+                    ->setLineOffset(0)
+                    ->setContent($code === false ? "Failed to read file." : $code);
             }
         }
         $stacks[] = (new StackTrace())
