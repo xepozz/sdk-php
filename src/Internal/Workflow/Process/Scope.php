@@ -41,6 +41,9 @@ use Temporal\Workflow\CancellationScopeInterface;
  */
 class Scope implements CancellationScopeInterface, Destroyable
 {
+    /** How many times the destruct failure is redelivered to a Fiber that keeps suspending while unwinding. */
+    private const MAX_UNWIND_ATTEMPTS = 64;
+
     protected ServiceContainer $services;
 
     /** @psalm-suppress PropertyNotSetInConstructor */
@@ -267,9 +270,8 @@ class Scope implements CancellationScopeInterface, Destroyable
         });
 
         $cleanup = function () use ($cancelID): void {
-            $this->makeCurrent();
-            $this->context->resolveConditions();
             unset($this->onCancel[$cancelID]);
+            $this->resolveConditionsInScope();
         };
 
         $deferred->promise()->then($cleanup, $cleanup);
@@ -277,20 +279,10 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function destroy(): void
     {
-        $children = $this->children;
-        $this->children = [];
-
-        foreach ($children as $child) {
-            $child->destroy();
-        }
-
-        /** @psalm-suppress RedundantPropertyInitializationCheck, RedundantCondition */
-        if (isset($this->coroutine) && $this->coroutine->isSuspended()) {
-            try {
-                $this->coroutine->throw(new DestructMemorizedInstanceException());
-            } catch (\Throwable) {
-            }
-        }
+        $this->destroyChildren();
+        $this->unwindCoroutine();
+        // Unwinding may have started new scopes from finally blocks.
+        $this->destroyChildren();
 
         if ($this->ownsContext) {
             $this->context?->destroy();
@@ -298,7 +290,6 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         unset(
-            $this->coroutine,
             $this->context,
             $this->scopeContext,
             $this->deferred,
@@ -384,9 +375,8 @@ class Scope implements CancellationScopeInterface, Destroyable
         }, $cancellable);
 
         $cleanup = function () use ($cancelID): void {
-            $this->makeCurrent();
-            $this->context->resolveConditions();
             unset($this->onCancel[$cancelID]);
+            $this->resolveConditionsInScope();
         };
 
         $promise->then($cleanup, $cleanup);
@@ -409,6 +399,53 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         $this->advance($suspended);
+    }
+
+    private function destroyChildren(): void
+    {
+        while ($this->children !== []) {
+            $children = $this->children;
+            $this->children = [];
+
+            foreach ($children as $child) {
+                $child->destroy();
+            }
+        }
+    }
+
+    /**
+     * Terminate the workflow Fiber of this scope.
+     *
+     * The destruct failure is delivered again each time a finally block suspends while unwinding,
+     * so the Fiber terminates here instead of being force-closed by the engine at an arbitrary
+     * later point (a cycle through the scope context keeps it alive until a GC run).
+     */
+    private function unwindCoroutine(): void
+    {
+        /** @psalm-suppress RedundantPropertyInitializationCheck, RedundantCondition */
+        if (!isset($this->coroutine)) {
+            return;
+        }
+
+        for ($attempt = 0; $attempt < self::MAX_UNWIND_ATTEMPTS; ++$attempt) {
+            /** @psalm-suppress RedundantPropertyInitializationCheck, RedundantCondition, TypeDoesNotContainType */
+            if (!isset($this->coroutine) || !$this->coroutine->isSuspended()) {
+                break;
+            }
+
+            try {
+                $this->coroutine->throw(new DestructMemorizedInstanceException());
+            } catch (\Throwable) {
+                break;
+            }
+        }
+
+        try {
+            // A Fiber that is still suspended is force-closed by the engine here;
+            // its finally blocks run and may throw.
+            unset($this->coroutine);
+        } catch (\Throwable) {
+        }
     }
 
     private function advance(mixed $suspended): void
@@ -474,14 +511,6 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private function nextPromise(PromiseInterface $promise, bool $interruptOnCancel): void
     {
-        if ($promise instanceof CancellationScopeInterface && $promise->isCancelled()) {
-            $reason = FeatureFlags::$propagateCancellationToNewScopes && $promise instanceof self
-                ? $promise->cancelReason
-                : null;
-            $this->handleError($reason ?? new CanceledFailure(''));
-            return;
-        }
-
         $settled = false;
         $cancelID = null;
 
@@ -631,12 +660,40 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
     }
 
+    /**
+     * Evaluate await conditions with this scope as the current context, then restore the caller's context.
+     *
+     * The caller may be a user fiber of another scope (e.g. a Mutex release or a manually resolved
+     * promise), so the context must not leak into it.
+     */
+    private function resolveConditionsInScope(): void
+    {
+        $savedContext = Facade::getCurrentContext();
+
+        try {
+            $this->makeCurrent();
+            $this->context->resolveConditions();
+        } finally {
+            Workflow::setCurrentContext($savedContext);
+        }
+    }
+
     private function defer(\Closure $tick): void
     {
         $this->services->loop->once($this->layer, $tick);
 
-        if ($this->services->queue->count() === 0) {
+        if ($this->services->queue->count() !== 0) {
+            return;
+        }
+
+        // The synchronous tick may resume other fibers (nested in the current one); their contexts
+        // must not leak into the caller.
+        $savedContext = Facade::getCurrentContext();
+
+        try {
             $this->services->loop->tick();
+        } finally {
+            Workflow::setCurrentContext($savedContext);
         }
     }
 
