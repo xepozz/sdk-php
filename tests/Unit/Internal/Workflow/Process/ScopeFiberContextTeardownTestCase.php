@@ -119,6 +119,31 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertInstanceOf(CanceledFailure::class, $caught);
     }
 
+    public function testAwaitingACancelledScopeDeliversTheValueItRecoveredWith(): void
+    {
+        $result = null;
+
+        $this->startRoot(static function () use (&$result): string {
+            $scope = Workflow::async(static function (): string {
+                try {
+                    Workflow::await(static fn(): bool => false);
+                } catch (CanceledFailure) {
+                    return 'recovered';
+                }
+
+                return 'unreachable';
+            });
+
+            $scope->cancel();
+            $result = Workflow::await($scope);
+
+            return 'done';
+        });
+        $this->flush();
+
+        self::assertSame('recovered', $result);
+    }
+
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
     {
         $childCancelled = false;
