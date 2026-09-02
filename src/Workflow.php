@@ -823,7 +823,6 @@ final class Workflow extends Facade
         Awaiter::assertManaged();
         return Awaiter::await(
             self::getCurrentContext()->executeChildWorkflow($type, $args, $options, $returnType),
-            interruptOnCancel: false,
         );
     }
 
