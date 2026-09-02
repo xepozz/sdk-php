@@ -179,7 +179,13 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function cancel(?\Throwable $reason = null): void
     {
-        if ($this->cancelled || $this->closed) {
+        if ($this->cancelled) {
+            return;
+        }
+
+        if ($this->closed) {
+            // The scope has settled, but scopes started from it may still be running.
+            $this->cancelChildren($reason);
             return;
         }
 
@@ -646,7 +652,8 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $onClose = $this->onClose;
         $this->onClose = [];
-        $this->onCancel = [];
+        // Keep only the handlers that cancel child scopes: they may outlive this scope.
+        $this->onCancel = \array_intersect_key($this->onCancel, $this->children);
         unset($this->coroutine);
 
         try {
@@ -694,6 +701,14 @@ class Scope implements CancellationScopeInterface, Destroyable
             $this->services->loop->tick();
         } finally {
             Workflow::setCurrentContext($savedContext);
+        }
+    }
+
+    private function cancelChildren(?\Throwable $reason): void
+    {
+        foreach ($this->children as $id => $child) {
+            unset($this->onCancel[$id], $this->children[$id]);
+            $child->cancelFromParent($reason);
         }
     }
 

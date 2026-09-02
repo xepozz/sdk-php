@@ -119,6 +119,35 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertInstanceOf(CanceledFailure::class, $caught);
     }
 
+    public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
+    {
+        $childCancelled = false;
+        $parentResult = null;
+
+        $this->startRoot(static function () use (&$childCancelled, &$parentResult): string {
+            $scope = Workflow::async(static function () use (&$childCancelled): string {
+                Workflow::async(static function () use (&$childCancelled): void {
+                    try {
+                        Workflow::await(static fn(): bool => false);
+                    } catch (CanceledFailure) {
+                        $childCancelled = true;
+                    }
+                });
+
+                return 'parent done';
+            });
+
+            $parentResult = $scope->await();
+            $scope->cancel();
+
+            return 'done';
+        });
+        $this->flush();
+
+        self::assertSame('parent done', $parentResult);
+        self::assertTrue($childCancelled, 'A child scope still running after its parent completed was not cancelled.');
+    }
+
     public function testDestroyUnwindsAFinallyBlockThatSuspendsAgain(): void
     {
         $log = [];
