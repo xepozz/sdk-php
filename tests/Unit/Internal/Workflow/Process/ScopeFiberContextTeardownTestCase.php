@@ -6,6 +6,7 @@ namespace Temporal\Tests\Unit\Internal\Workflow\Process;
 
 use Internal\Destroy\Destroyable;
 use PHPUnit\Framework\TestCase;
+use Ramsey\Uuid\UuidInterface;
 use React\Promise\Deferred;
 use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\EncodedValues;
@@ -20,12 +21,16 @@ use Temporal\Internal\Declaration\WorkflowInstance\SignalDispatcher;
 use Temporal\Internal\Declaration\WorkflowInstance\UpdateDispatcher;
 use Temporal\Internal\Declaration\WorkflowInstanceInterface;
 use Temporal\Internal\ServiceContainer;
+use Temporal\Internal\Transport\Request\GetVersion;
+use Temporal\Internal\Transport\Request\SideEffect;
 use Temporal\Internal\Workflow\Input;
 use Temporal\Internal\Workflow\Process\Scope;
 use Temporal\Internal\Workflow\ScopeContext;
 use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Tests\Unit\Framework\WorkerFactoryMock;
 use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Worker\Transport\Command\Server\SuccessResponse;
+use Temporal\Worker\Transport\Command\Server\TickInfo;
 use Temporal\Worker\FeatureFlags;
 use Temporal\Workflow;
 use Temporal\Workflow\CancellationScopeInterface;
@@ -184,6 +189,86 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         } finally {
             FeatureFlags::$cancelAbandonedChildWorkflows = $flag;
         }
+    }
+
+    public function testSideEffectGetVersionAndUuidAreNotSubjectToScopeCancellation(): void
+    {
+        $calls = [
+            'sideEffect' => static fn(): mixed => Workflow::sideEffect(static fn(): int => 7),
+            'getVersion' => static fn(): mixed => Workflow::getVersion('change', 1, 2),
+            'uuid' => static fn(): mixed => Workflow::uuid(),
+        ];
+        $results = [];
+        $errors = [];
+
+        $this->startRoot(static function () use ($calls, &$results, &$errors): void {
+            foreach ($calls as $name => $call) {
+                $scope = Workflow::async(static function () use ($name, $call, &$results, &$errors): void {
+                    try {
+                        Workflow::await(static fn(): bool => false);
+                    } catch (CanceledFailure) {
+                        // The scope is cancelled from now on.
+                    }
+
+                    try {
+                        $results[$name] = $call();
+                    } catch (\Throwable $e) {
+                        $errors[$name] = $e;
+                    }
+                });
+
+                $scope->cancel();
+            }
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        self::assertSame([], $errors, 'Marker commands must not fail in a cancelled scope.');
+
+        // The commands reached the server; answer them the way the server does.
+        $commands = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertCount(3, $commands);
+        self::assertInstanceOf(SideEffect::class, $commands[0]);
+        self::assertInstanceOf(GetVersion::class, $commands[1]);
+        self::assertInstanceOf(SideEffect::class, $commands[2]);
+
+        $client = $this->factory->getClient();
+        $tick = new TickInfo(new \DateTimeImmutable());
+        $client->dispatch(new SuccessResponse($commands[0]->getPayloads(), $commands[0]->getID(), $tick));
+        $client->dispatch(new SuccessResponse(EncodedValues::fromValues([2]), $commands[1]->getID(), $tick));
+        $client->dispatch(new SuccessResponse($commands[2]->getPayloads(), $commands[2]->getID(), $tick));
+        $this->flush();
+
+        self::assertSame(7, $results['sideEffect'] ?? null);
+        self::assertSame(2, $results['getVersion'] ?? null);
+        self::assertInstanceOf(UuidInterface::class, $results['uuid'] ?? null);
+    }
+
+    public function testNonCancellableQueuedCommandSurvivesALaterScopeCancellation(): void
+    {
+        $scope = null;
+        $error = null;
+
+        $this->startRoot(static function () use (&$scope, &$error): void {
+            $scope = Workflow::async(static function () use (&$error): void {
+                try {
+                    Workflow::sideEffect(static fn(): int => 1);
+                } catch (\Throwable $e) {
+                    $error = $e;
+                }
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        self::assertSame(1, $this->factory->getQueue()->count());
+        self::assertInstanceOf(CancellationScopeInterface::class, $scope);
+
+        $scope->cancel();
+        $this->flush();
+
+        self::assertNull($error);
+        self::assertSame(1, $this->factory->getQueue()->count(), 'The queued marker command was dropped.');
     }
 
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
