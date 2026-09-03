@@ -531,10 +531,8 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $id = ++$this->cancelID;
 
-        if ($this->closed) {
-            return $id;
-        }
-
+        // Sticky cancellation comes first: a handler attached to a scope that was cancelled,
+        // settled or not, is notified at once.
         if (FeatureFlags::$propagateCancellationToNewScopes && $this->cancelled && $cancellable) {
             $savedContext = Facade::getCurrentContext();
 
@@ -545,6 +543,11 @@ class Scope implements CancellationScopeInterface, Destroyable
                 Workflow::setCurrentContext($savedContext);
             }
 
+            return $id;
+        }
+
+        if ($this->closed) {
+            // Nothing attached after the scope settled can fire any more.
             return $id;
         }
 
