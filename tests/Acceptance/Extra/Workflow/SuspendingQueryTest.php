@@ -22,7 +22,7 @@ class SuspendingQueryTest extends TestCase
             $stub->query('suspending')?->getValue(0);
             self::fail('A suspending query handler must not succeed.');
         } catch (\Throwable $error) {
-            self::assertStringContainsString('Workflow is not initialized', self::chainMessage($error));
+            self::assertStringContainsString('not allowed inside a query handler', self::chainMessage($error));
         } finally {
             $stub->signal('exit');
         }
