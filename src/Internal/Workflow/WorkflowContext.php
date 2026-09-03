@@ -108,6 +108,8 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected ?string $readonlyReason = null;
 
     protected ?string $currentDetails = null;
+    private bool $resolvingConditions = false;
+    private bool $conditionsDirty = false;
 
     /** @var Pipeline<WorkflowOutboundRequestInterceptor, PromiseInterface> */
     private Pipeline $requestInterceptor;
@@ -699,24 +701,48 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
      */
     public function resolveConditions(): void
     {
-        foreach ($this->awaits as $awaitsGroupId => $awaitsGroup) {
-            foreach ($awaitsGroup as $i => [$condition, $deferred]) {
-                try {
-                    $unblocked = (bool) self::callReadOnly($condition, 'an await condition');
-                } catch (\Throwable $e) {
-                    // A failing condition fails the await instead of the whole activation.
-                    unset($this->awaits[$awaitsGroupId][$i]);
-                    $deferred->reject($e);
-                    $this->rejectConditionGroup($awaitsGroupId);
-                    continue;
-                }
+        // Settling a condition runs callbacks that call back into this method. Instead of
+        // recursing (and copying the pending list at every level), remember that another
+        // pass is needed and run it once the current one is over.
+        if ($this->resolvingConditions) {
+            $this->conditionsDirty = true;
+            return;
+        }
 
-                if ($unblocked) {
-                    unset($this->awaits[$awaitsGroupId][$i]);
-                    $deferred->resolve(null);
-                    $this->resolveConditionGroup($awaitsGroupId);
+        $this->resolvingConditions = true;
+
+        try {
+            do {
+                $this->conditionsDirty = false;
+
+                foreach ($this->awaits as $awaitsGroupId => $awaitsGroup) {
+                    foreach ($awaitsGroup as $i => [$condition, $deferred]) {
+                        if (!isset($this->awaits[$awaitsGroupId][$i])) {
+                            // Settled by a previous condition of this pass.
+                            continue;
+                        }
+
+                        try {
+                            $unblocked = (bool) self::callReadOnly($condition, 'an await condition');
+                        } catch (\Throwable $e) {
+                            // A failing condition fails the await instead of the whole activation.
+                            unset($this->awaits[$awaitsGroupId][$i]);
+                            $deferred->reject($e);
+                            $this->rejectConditionGroup($awaitsGroupId);
+                            continue;
+                        }
+
+                        if ($unblocked) {
+                            unset($this->awaits[$awaitsGroupId][$i]);
+                            $deferred->resolve(null);
+                            $this->resolveConditionGroup($awaitsGroupId);
+                        }
+                    }
                 }
-            }
+            } while ($this->takeConditionsDirty());
+        } finally {
+            $this->resolvingConditions = false;
+            $this->conditionsDirty = false;
         }
     }
 
@@ -918,5 +944,16 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected function recordTrace(): void
     {
         $this->readonly or $this->trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
+    }
+
+    /**
+     * Whether a re-entrant {@see resolveConditions()} call asked for another pass.
+     */
+    private function takeConditionsDirty(): bool
+    {
+        $dirty = $this->conditionsDirty;
+        $this->conditionsDirty = false;
+
+        return $dirty;
     }
 }
