@@ -54,6 +54,7 @@ use Temporal\Internal\Interceptor\HeaderCarrier;
 use Temporal\Internal\Interceptor\Pipeline;
 use Temporal\Internal\ServiceContainer;
 use Temporal\Internal\Support\DateInterval;
+use Temporal\Internal\Support\Facade;
 use Temporal\Internal\Support\StackRenderer;
 use Temporal\Internal\Transport\ClientInterface;
 use Temporal\Internal\Transport\CompletableResultInterface;
@@ -102,6 +103,10 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected array $trace = [];
     protected bool $continueAsNew = false;
     protected bool $readonly = true;
+
+    /** @var non-empty-string|null What made the context read-only, when it is a user callback. */
+    protected ?string $readonlyReason = null;
+
     protected ?string $currentDetails = null;
 
     /** @var Pipeline<WorkflowOutboundRequestInterceptor, PromiseInterface> */
@@ -172,9 +177,15 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
     public function assertWritable(): void
     {
-        if ($this->readonly) {
-            throw new \RuntimeException('Workflow is not initialized.');
+        if (!$this->readonly) {
+            return;
         }
+
+        throw new \RuntimeException(
+            $this->readonlyReason === null
+                ? 'Workflow is not initialized.'
+                : "Workflow calls that suspend or send commands are not allowed inside $this->readonlyReason.",
+        );
     }
 
     public function setReadonly(bool $value = true): static
@@ -275,11 +286,14 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
         try {
             if (!$this->isReplaying()) {
-                $value = $this->callsInterceptor->with(
-                    $closure,
-                    /** @see WorkflowOutboundCallsInterceptor::sideEffect() */
-                    'sideEffect',
-                )(new SideEffectInput($closure, $options));
+                $value = self::callReadOnly(
+                    fn(): mixed => $this->callsInterceptor->with(
+                        $closure,
+                        /** @see WorkflowOutboundCallsInterceptor::sideEffect() */
+                        'sideEffect',
+                    )(new SideEffectInput($closure, $options)),
+                    'a side effect callback',
+                );
             }
         } catch (\Throwable $e) {
             return reject($e);
@@ -687,7 +701,17 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     {
         foreach ($this->awaits as $awaitsGroupId => $awaitsGroup) {
             foreach ($awaitsGroup as $i => [$condition, $deferred]) {
-                if ($condition()) {
+                try {
+                    $unblocked = (bool) self::callReadOnly($condition, 'an await condition');
+                } catch (\Throwable $e) {
+                    // A failing condition fails the await instead of the whole activation.
+                    unset($this->awaits[$awaitsGroupId][$i]);
+                    $deferred->reject($e);
+                    $this->rejectConditionGroup($awaitsGroupId);
+                    continue;
+                }
+
+                if ($unblocked) {
                     unset($this->awaits[$awaitsGroupId][$i]);
                     $deferred->resolve(null);
                     $this->resolveConditionGroup($awaitsGroupId);
@@ -780,6 +804,34 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         $this->currentDetails = $details;
     }
 
+    /**
+     * Run a user callback with the current context made read-only, so a call that suspends
+     * or sends a command inside it fails instead of breaking determinism.
+     *
+     * @template T
+     * @param callable(): T $callback
+     * @param non-empty-string $what
+     * @return T
+     */
+    protected static function callReadOnly(callable $callback, string $what): mixed
+    {
+        $context = Facade::getCurrentContext();
+
+        if (!$context instanceof self || $context->readonly) {
+            return $callback();
+        }
+
+        $context->readonly = true;
+        $context->readonlyReason = $what;
+
+        try {
+            return $callback();
+        } finally {
+            $context->readonly = false;
+            $context->readonlyReason = null;
+        }
+    }
+
     protected function awaitRequest(callable|Mutex|PromiseInterface ...$conditions): PromiseInterface
     {
         $result = [];
@@ -792,7 +844,10 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
             }
 
             if ($condition instanceof \Closure) {
-                $callableResult = $condition($conditionGroupId);
+                $callableResult = self::callReadOnly(
+                    static fn(): mixed => $condition($conditionGroupId),
+                    'an await condition',
+                );
                 if ($callableResult === true) {
                     $this->resolveConditionGroup($conditionGroupId);
                     return resolve(true);

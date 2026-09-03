@@ -397,39 +397,79 @@ final class ScopeFiberFlowControlTestCase extends TestCase
         }
     }
 
-    public function testAwaitPredicateIsAllowedToSuspendTheEnclosingFiber(): void
+    public function testAwaitPredicateMustNotSuspend(): void
     {
         $gate = new Deferred();
         $log = [];
-        $flag = false;
+        $failure = null;
 
-        $this->startRoot(static function () use ($gate, &$log, &$flag): string {
-            $log[] = 'before await';
+        $this->startRoot(static function () use ($gate, &$log, &$failure): string {
+            try {
+                Workflow::await(static function () use ($gate, &$log): bool {
+                    $log[] = 'predicate entered';
+                    Workflow::await($gate->promise());
+                    $log[] = 'predicate resumed';
 
-            Workflow::await(static function () use ($gate, &$flag, &$log): bool {
-                $log[] = 'predicate entered';
-                Workflow::await($gate->promise());
-                $log[] = 'predicate resumed';
-
-                return $flag;
-            });
-
-            $log[] = 'after await';
+                    return true;
+                });
+            } catch (\RuntimeException $e) {
+                $failure = $e;
+            }
 
             return 'done';
         });
         $this->flush();
 
-        self::assertSame(['before await', 'predicate entered'], $log);
+        self::assertSame(['predicate entered'], $log);
+        self::assertInstanceOf(\RuntimeException::class, $failure);
+        self::assertStringContainsString('await condition', $failure->getMessage());
+    }
 
-        $flag = true;
-        $gate->resolve(null);
+    public function testAwaitPredicateFailureLaterIsDeliveredToTheAwaitingScope(): void
+    {
+        $failure = null;
+        $calls = 0;
+
+        $this->startRoot(static function () use (&$failure, &$calls): string {
+            try {
+                Workflow::await(static function () use (&$calls): bool {
+                    if (++$calls > 1) {
+                        // Suspending from a condition re-evaluated by the scheduler is rejected as well.
+                        Workflow::timer(1);
+                    }
+
+                    return false;
+                });
+            } catch (\RuntimeException $e) {
+                $failure = $e;
+            }
+
+            return 'done';
+        });
         $this->flush();
 
-        self::assertSame(
-            ['before await', 'predicate entered', 'predicate resumed', 'after await'],
-            $log,
-        );
+        self::assertGreaterThan(1, $calls);
+        self::assertInstanceOf(\RuntimeException::class, $failure);
+        self::assertStringContainsString('await condition', $failure->getMessage());
+    }
+
+    public function testSideEffectCallbackMustNotSuspend(): void
+    {
+        $failure = null;
+
+        $this->startRoot(static function () use (&$failure): string {
+            try {
+                Workflow::sideEffect(static fn(): mixed => Workflow::timer(1));
+            } catch (\RuntimeException $e) {
+                $failure = $e;
+            }
+
+            return 'done';
+        });
+        $this->flush();
+
+        self::assertInstanceOf(\RuntimeException::class, $failure);
+        self::assertStringContainsString('side effect callback', $failure->getMessage());
     }
 
     protected function setUp(): void
