@@ -83,6 +83,7 @@ final class RecordGeneratorHistories extends TestCase
         yield 'CancelledWorkflow' => ['CancelledWorkflow', [], self::cancelAfterActivityScheduled(...)];
         yield 'CancelledWithCompensationWorkflow' => ['CancelledWithCompensationWorkflow', [], self::cancelAfterActivityScheduled(...)];
         yield 'CancelledNestedWorkflow' => ['CancelledNestedWorkflow', [], self::cancelAfterTimerStarted(...)];
+        yield 'CancelledAwaitCompensationWorkflow' => ['CancelledAwaitCompensationWorkflow', [], null];
         yield 'SimpleSignalledWorkflowWithSleep' => ['SimpleSignalledWorkflowWithSleep', [-1], self::cancelAfterTimerStarted(...)];
     }
 

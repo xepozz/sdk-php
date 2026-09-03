@@ -26,6 +26,8 @@ use Temporal\Internal\Declaration\MethodHandler;
 use Temporal\Internal\ServiceContainer;
 use Temporal\Internal\Support\Facade;
 use Temporal\Internal\Transport\Request\Cancel;
+use Temporal\Internal\Transport\Request\GetVersion;
+use Temporal\Internal\Transport\Request\SideEffect;
 use Temporal\Internal\Workflow\ScopeContext;
 use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Worker\FeatureFlags;
@@ -182,30 +184,20 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function cancel(?\Throwable $reason = null): void
     {
-        if ($this->cancelled) {
+        if ($this->closed) {
+            // The scope has settled, but scopes it started and requests it sent without awaiting
+            // may still be pending: forward the cancellation to them without changing the scope.
+            $this->runCancelHandlers($reason);
             return;
         }
 
-        if ($this->closed) {
-            // The scope has settled, but scopes started from it may still be running.
-            $this->cancelChildren($reason);
+        if ($this->cancelled) {
             return;
         }
 
         $this->cancelled = true;
         $this->cancelReason = $reason;
-
-        $savedContext = Facade::getCurrentContext();
-
-        try {
-            foreach ($this->orderedCancelHandlers() as $i => $handler) {
-                $this->makeCurrent();
-                unset($this->onCancel[$i]);
-                $handler($reason);
-            }
-        } finally {
-            Workflow::setCurrentContext($savedContext);
-        }
+        $this->runCancelHandlers($reason);
     }
 
     /**
@@ -336,7 +328,7 @@ class Scope implements CancellationScopeInterface, Destroyable
             $scope->layer = $layer;
         }
 
-        $cancelID = $this->addOnCancel($scope->cancelFromParent(...));
+        $cancelID = $this->addOnCancel($scope->cancelFromParent(...), cancellable: !$detached);
         $this->children[$cancelID] = $scope;
 
         $scope->parentUnlink = function () use ($cancelID): void {
@@ -380,20 +372,26 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     protected function onRequest(RequestInterface $request, PromiseInterface $promise, bool $cancellable = true): void
     {
-        $cancelID = $this->addOnCancel(function (?\Throwable $reason = null) use ($request, $cancellable): void {
+        // A marker (side effect, version) is recorded regardless of scope cancellation.
+        $marker = $request instanceof SideEffect || $request instanceof GetVersion;
+
+        $cancelID = $this->addOnCancel(function (?\Throwable $reason = null) use ($request, $cancellable, $marker): void {
             $client = $this->context->getClient();
             if ($reason instanceof DestructMemorizedInstanceException) {
                 $client->reject($request, $reason);
                 return;
             }
 
-            if (!$cancellable) {
-                // The command must reach the server even if the scope is cancelled meanwhile.
+            if ($marker) {
                 return;
             }
 
             if ($client->isQueued($request)) {
                 $client->cancel($request);
+                return;
+            }
+
+            if (!$cancellable) {
                 return;
             }
 
@@ -425,6 +423,21 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         $this->advance($suspended);
+    }
+
+    private function runCancelHandlers(?\Throwable $reason): void
+    {
+        $savedContext = Facade::getCurrentContext();
+
+        try {
+            foreach ($this->orderedCancelHandlers() as $i => $handler) {
+                $this->makeCurrent();
+                unset($this->onCancel[$i]);
+                $handler($reason);
+            }
+        } finally {
+            Workflow::setCurrentContext($savedContext);
+        }
     }
 
     private function destroyChildren(): void
@@ -517,6 +530,10 @@ class Scope implements CancellationScopeInterface, Destroyable
     private function addOnCancel(callable $handler, bool $cancellable = true): int
     {
         $id = ++$this->cancelID;
+
+        if ($this->closed) {
+            return $id;
+        }
 
         if (FeatureFlags::$propagateCancellationToNewScopes && $this->cancelled && $cancellable) {
             $savedContext = Facade::getCurrentContext();
@@ -672,7 +689,8 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $onClose = $this->onClose;
         $this->onClose = [];
-        $this->onCancel = [];
+        // Handlers of pending requests and running children stay: cancel() of a settled scope
+        // forwards to them. They remove themselves when the request or child settles.
         unset($this->coroutine);
 
         try {
@@ -720,15 +738,6 @@ class Scope implements CancellationScopeInterface, Destroyable
             $this->services->loop->tick();
         } finally {
             Workflow::setCurrentContext($savedContext);
-        }
-    }
-
-    private function cancelChildren(?\Throwable $reason): void
-    {
-        // Children unlink themselves when they settle; a child that survives the cancellation
-        // stays reachable for destroy().
-        foreach ($this->children as $child) {
-            $child->cancelFromParent($reason);
         }
     }
 

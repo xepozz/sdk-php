@@ -163,9 +163,10 @@ that way must be drained before the upgrade or versioned with
 `Workflow::getVersion()`:
 
 - `Workflow::sideEffect()`, `Workflow::getVersion()` and `Workflow::uuid()` in a
-  cancelled scope used to throw `CanceledFailure`; they now record their marker.
-- A scope cancelled in the same activation that queued one of those markers used
-  to drop the queued command; it is now sent.
+  cancelled scope used to throw `CanceledFailure`; they now record their marker,
+  and a marker queued in the activation that cancels the scope is still sent.
+  Every other command still behaves as before: dropped while queued, cancelled
+  through the server once sent.
 
 Run `WorkflowReplayer::replayFromServer()` on representative executions before
 deploying.
