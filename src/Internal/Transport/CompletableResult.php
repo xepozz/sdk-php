@@ -13,6 +13,7 @@ namespace Temporal\Internal\Transport;
 
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
+use Temporal\Internal\Support\Facade;
 use Temporal\Worker\LoopInterface;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowContextInterface;
@@ -105,8 +106,14 @@ class CompletableResult implements CompletableResultInterface
 
     public function cancel(): void
     {
+        $saved = Facade::getCurrentContext();
         Workflow::setCurrentContext($this->context);
-        $this->promise()->cancel();
+
+        try {
+            $this->promise()->cancel();
+        } finally {
+            Workflow::setCurrentContext($saved);
+        }
     }
 
     /**
@@ -165,8 +172,15 @@ class CompletableResult implements CompletableResultInterface
         }
 
         return function (mixed $value = null) use ($callback): mixed {
+            // The callback may run synchronously inside another scope's fiber: restore its context.
+            $saved = Facade::getCurrentContext();
             Workflow::setCurrentContext($this->context);
-            return $callback($value);
+
+            try {
+                return $callback($value);
+            } finally {
+                Workflow::setCurrentContext($saved);
+            }
         };
     }
 }

@@ -91,9 +91,11 @@ final class Mutex
     {
         $this->locked = false;
 
-        // Wake the next waiter even when released outside a scope step (e.g. from a promise callback).
+        // Wake the next waiter even when released outside a scope step (e.g. from a promise
+        // callback). Not from a read-only context: a condition or a query must not drive the
+        // scheduler, and the pass that evaluates the condition picks the release up itself.
         $context = Facade::getCurrentContext();
-        if ($context instanceof WorkflowContext) {
+        if ($context instanceof WorkflowContext && !$context->isReadonly()) {
             $context->resolveConditions();
         }
     }

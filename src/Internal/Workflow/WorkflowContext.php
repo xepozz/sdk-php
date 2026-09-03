@@ -28,6 +28,7 @@ use Temporal\Common\Uuid;
 use Temporal\DataConverter\EncodedValues;
 use Temporal\DataConverter\Type;
 use Temporal\DataConverter\ValuesInterface;
+use Temporal\Exception\Failure\CanceledFailure;
 use Temporal\Interceptor\HeaderInterface;
 use Temporal\Interceptor\WorkflowOutboundCalls\AwaitInput;
 use Temporal\Interceptor\WorkflowOutboundCalls\AwaitWithTimeoutInput;
@@ -94,6 +95,9 @@ use function React\Promise\resolve;
  */
 class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destroyable
 {
+    /** Upper bound of re-runs of the condition pass in one resolveConditions() call. */
+    private const MAX_CONDITION_PASSES = 10_000;
+
     /**
      * Contains conditional groups that contains tuple of a condition callable and its promise
      * @var array<non-empty-string, array<int<0, max>, array{callable, Deferred}>>
@@ -175,6 +179,11 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     public function getInput(): ValuesInterface
     {
         return $this->input->input;
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
     }
 
     public function assertWritable(): void
@@ -717,6 +726,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         }
 
         $this->resolvingConditions = true;
+        $passes = 0;
 
         try {
             do {
@@ -733,10 +743,15 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
                         // generator runtime and the Java SDK.
                         if (self::callReadOnly($condition, 'an await condition')) {
                             unset($this->awaits[$awaitsGroupId][$i]);
-                            $deferred->resolve(null);
+                            $deferred->resolve(true);
                             $this->resolveConditionGroup($awaitsGroupId);
                         }
                     }
+                }
+                if (++$passes > self::MAX_CONDITION_PASSES) {
+                    throw new \RuntimeException(
+                        'Await conditions keep changing the workflow state; a condition must be side-effect free.',
+                    );
                 }
             } while ($this->takeConditionsDirty());
         } finally {
@@ -747,12 +762,18 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
     public function resolveConditionGroup(string $conditionGroupId): void
     {
-        unset($this->awaits[$conditionGroupId]);
+        // The await is over: the sibling conditions of the group are settled too, so their
+        // scope links are released.
+        foreach ($this->takeConditionGroup($conditionGroupId) as [, $deferred]) {
+            $deferred->resolve(false);
+        }
     }
 
-    public function rejectConditionGroup(string $conditionGroupId): void
+    public function rejectConditionGroup(string $conditionGroupId, ?\Throwable $reason = null): void
     {
-        unset($this->awaits[$conditionGroupId]);
+        foreach ($this->takeConditionGroup($conditionGroupId) as [, $deferred]) {
+            $deferred->reject($reason ?? new CanceledFailure(''));
+        }
     }
 
     public function uuid(): PromiseInterface
@@ -943,6 +964,17 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected function recordTrace(): void
     {
         $this->readonly or $this->trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
+    }
+
+    /**
+     * @return list<array{0: callable, 1: Deferred}>
+     */
+    private function takeConditionGroup(string $conditionGroupId): array
+    {
+        $group = $this->awaits[$conditionGroupId] ?? [];
+        unset($this->awaits[$conditionGroupId]);
+
+        return \array_values($group);
     }
 
     /**

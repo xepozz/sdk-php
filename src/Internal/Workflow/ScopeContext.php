@@ -124,9 +124,9 @@ class ScopeContext extends WorkflowContext implements ScopedContextInterface
         $this->parent->resolveConditionGroup($conditionGroupId);
     }
 
-    public function rejectConditionGroup(string $conditionGroupId): void
+    public function rejectConditionGroup(string $conditionGroupId, ?\Throwable $reason = null): void
     {
-        $this->parent->rejectConditionGroup($conditionGroupId);
+        $this->parent->rejectConditionGroup($conditionGroupId, $reason);
     }
 
     #[\Override]
