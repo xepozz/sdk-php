@@ -398,6 +398,29 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertInstanceOf(CanceledFailure::class, $failure);
     }
 
+    public function testOnCancelAttachedToACancelledAndSettledScopeFiresAtOnce(): void
+    {
+        $log = [];
+
+        $this->startRoot(static function () use (&$log): void {
+            $scope = Workflow::async(static function () use (&$log): void {
+                try {
+                    Workflow::await(static fn(): bool => false);
+                } catch (CanceledFailure) {
+                    $log[] = 'unwound';
+                }
+            });
+            $scope->cancel();
+
+            // The scope is cancelled and already settled.
+            $scope->onCancel(static function () use (&$log): void {
+                $log[] = 'oncancel fired';
+            });
+        });
+
+        self::assertSame(['unwound', 'oncancel fired'], $log);
+    }
+
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
     {
         $childCancelled = false;
