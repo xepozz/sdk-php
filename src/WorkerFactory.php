@@ -387,7 +387,12 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
             $this->server->dispatch($command, $headers);
         }
 
-        $this->tick();
+        try {
+            $this->tick();
+        } finally {
+            // No workflow context is current between activations.
+            Workflow::setCurrentContext(null);
+        }
 
         return $this->codec->encode($this->responses);
     }
