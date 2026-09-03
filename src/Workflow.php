@@ -25,6 +25,7 @@ use Temporal\Exception\Failure\CanceledFailure;
 use Temporal\Exception\OutOfContextException;
 use Temporal\Internal\Support\Facade;
 use Temporal\Internal\Workflow\ActivityProxy;
+use Temporal\Internal\Workflow\ChildWorkflowStub;
 use Temporal\Internal\Workflow\ChildWorkflowProxy;
 use Temporal\Internal\Workflow\ContinueAsNewProxy;
 use Temporal\Internal\Workflow\ExternalWorkflowProxy;
@@ -836,6 +837,7 @@ final class Workflow extends Facade
         Awaiter::assertManaged();
         return Awaiter::await(
             self::getCurrentContext()->executeChildWorkflow($type, $args, $options, $returnType),
+            interruptOnCancel: !ChildWorkflowStub::isCancellable($options),
         );
     }
 

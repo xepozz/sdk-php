@@ -425,32 +425,60 @@ final class ScopeFiberFlowControlTestCase extends TestCase
         self::assertStringContainsString('await condition', $failure->getMessage());
     }
 
-    public function testAwaitPredicateFailureLaterIsDeliveredToTheAwaitingScope(): void
+    public function testAwaitPredicateFailureOnReEvaluationFailsTheActivation(): void
     {
-        $failure = null;
         $calls = 0;
 
-        $this->startRoot(static function () use (&$failure, &$calls): string {
-            try {
-                Workflow::await(static function () use (&$calls): bool {
-                    if (++$calls > 1) {
-                        // Suspending from a condition re-evaluated by the scheduler is rejected as well.
-                        Workflow::timer(1);
-                    }
+        $this->startRoot(static function () use (&$calls): string {
+            Workflow::await(static function () use (&$calls): bool {
+                // Evaluated once by await() and once more right after the fiber suspends.
+                if (++$calls > 2) {
+                    throw new \LogicException('condition failed');
+                }
 
+                return false;
+            });
+
+            return 'done';
+        });
+        self::assertSame(2, $calls);
+
+        // The scheduler re-evaluates the condition on its next pass; the failure surfaces there,
+        // as a workflow task failure, instead of being routed into an await.
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('condition failed');
+
+        $this->scopeContext->resolveConditions();
+    }
+
+    public function testReadOnlyGuardBlocksCommandsAndScopesBeforeTheyAreCreated(): void
+    {
+        $errors = [];
+
+        $this->startRoot(function () use (&$errors): string {
+            try {
+                Workflow::await(static function (): bool {
+                    Workflow::getCurrentContext()->timer(5);
                     return false;
                 });
             } catch (\RuntimeException $e) {
-                $failure = $e;
+                $errors['condition:timer'] = $e->getMessage();
+            }
+
+            try {
+                Workflow::sideEffect(static fn(): mixed => Workflow::async(static fn() => Workflow::timer(3)));
+            } catch (\RuntimeException $e) {
+                $errors['sideEffect:async'] = $e->getMessage();
             }
 
             return 'done';
         });
         $this->flush();
 
-        self::assertGreaterThan(1, $calls);
-        self::assertInstanceOf(\RuntimeException::class, $failure);
-        self::assertStringContainsString('await condition', $failure->getMessage());
+        self::assertCount(2, $errors);
+        self::assertStringContainsString('await condition', $errors['condition:timer']);
+        self::assertStringContainsString('side effect callback', $errors['sideEffect:async']);
+        self::assertSame(0, $this->factory->getQueue()->count(), 'No command may leave a read-only callback.');
     }
 
     public function testSideEffectCallbackMustNotSuspend(): void

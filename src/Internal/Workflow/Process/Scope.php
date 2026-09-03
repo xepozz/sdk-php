@@ -77,6 +77,9 @@ class Scope implements CancellationScopeInterface, Destroyable
     private ?\Throwable $cancelReason = null;
     private ?int $suspensionCancelID = null;
 
+    /** Removes this scope from its parent; kept until the scope and all its children are done. */
+    private ?\Closure $parentUnlink = null;
+
     public function __construct(
         ServiceContainer $services,
     ) {
@@ -303,6 +306,8 @@ class Scope implements CancellationScopeInterface, Destroyable
             }
         }
 
+        $this->parentUnlink = null;
+
         unset(
             $this->context,
             $this->scopeContext,
@@ -334,11 +339,17 @@ class Scope implements CancellationScopeInterface, Destroyable
         $cancelID = $this->addOnCancel($scope->cancelFromParent(...));
         $this->children[$cancelID] = $scope;
 
-        $scope->onClose(
-            function () use ($cancelID): void {
-                unset($this->onCancel[$cancelID], $this->children[$cancelID]);
-            },
-        );
+        $scope->parentUnlink = function () use ($cancelID): void {
+            unset($this->onCancel[$cancelID], $this->children[$cancelID]);
+
+            // The last running child of a settled scope releases the settled scope as well.
+            if ($this->closed) {
+                $this->unlinkFromParentIfIdle();
+            }
+        };
+        // A settled scope stays linked to its parent while scopes it started are still running,
+        // so cancellation and destruction keep reaching them through the parent chain.
+        $scope->onClose(static fn() => $scope->unlinkFromParentIfIdle());
 
         return $scope;
     }
@@ -661,8 +672,7 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $onClose = $this->onClose;
         $this->onClose = [];
-        // Keep only the handlers that cancel child scopes: they may outlive this scope.
-        $this->onCancel = \array_intersect_key($this->onCancel, $this->children);
+        $this->onCancel = [];
         unset($this->coroutine);
 
         try {
@@ -715,10 +725,22 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private function cancelChildren(?\Throwable $reason): void
     {
-        foreach ($this->children as $id => $child) {
-            unset($this->onCancel[$id], $this->children[$id]);
+        // Children unlink themselves when they settle; a child that survives the cancellation
+        // stays reachable for destroy().
+        foreach ($this->children as $child) {
             $child->cancelFromParent($reason);
         }
+    }
+
+    private function unlinkFromParentIfIdle(): void
+    {
+        if ($this->children !== [] || $this->parentUnlink === null) {
+            return;
+        }
+
+        $unlink = $this->parentUnlink;
+        $this->parentUnlink = null;
+        $unlink();
     }
 
     private function cancelFromParent(?\Throwable $reason = null): void
