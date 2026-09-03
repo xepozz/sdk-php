@@ -42,6 +42,7 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
     private WorkerFactoryMock $factory;
     private ContextTeardownRootScope $root;
     private ScopeContext $scopeContext;
+    private \PHPUnit\Framework\MockObject\MockObject $instance;
 
     public function testResolvingAPromiseAwaitedByAnotherScopeKeepsTheCallerContext(): void
     {
@@ -271,6 +272,21 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertSame(1, $this->factory->getQueue()->count(), 'The queued marker command was dropped.');
     }
 
+    public function testWorkflowInstanceDestroyRunsWithTheWorkflowContextCurrent(): void
+    {
+        $seen = false;
+        $this->instance->method('destroy')->willReturnCallback(static function () use (&$seen): void {
+            $seen = Workflow::getCurrentContext();
+        });
+
+        $this->startRoot(static fn(): string => 'done');
+        $before = Workflow::getCurrentContext();
+        $this->root->destroy();
+
+        self::assertInstanceOf(ScopeContext::class, $seen);
+        self::assertSame($before, Workflow::getCurrentContext(), 'destroy() must restore the caller context.');
+    }
+
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
     {
         $childCancelled = false;
@@ -389,6 +405,7 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
             ->willReturn(new SignalDispatcher($prototype, $workflow));
         $instance->method('getUpdateDispatcher')
             ->willReturn(new UpdateDispatcher($prototype, $workflow));
+        $this->instance = $instance;
 
         $context = new WorkflowContext(
             $services,

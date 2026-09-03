@@ -36,21 +36,18 @@ trait EventEmitterTrait
 
     public function emit(string $event, array $arguments = []): void
     {
-        $queue = $this->once[$event] ?? null;
+        // The queue is re-read on every iteration: a nested emit of the same event drains the
+        // shared queue and drops it, and a callback registered after that must still run here.
+        while (true) {
+            $queue = $this->once[$event] ?? null;
 
-        if ($queue === null) {
-            return;
-        }
+            if ($queue === null || $queue->isEmpty()) {
+                unset($this->once[$event]);
+                return;
+            }
 
-        // Callbacks registered while emitting, including by a nested emit of the same event,
-        // share this queue and run in registration order.
-        while (!$queue->isEmpty()) {
             $callback = $queue->dequeue();
             $callback(...$arguments);
-        }
-
-        if (($this->once[$event] ?? null) === $queue) {
-            unset($this->once[$event]);
         }
     }
 }

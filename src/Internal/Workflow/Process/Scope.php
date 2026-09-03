@@ -291,8 +291,16 @@ class Scope implements CancellationScopeInterface, Destroyable
         $this->destroyChildren();
 
         if ($this->ownsContext) {
-            $this->context?->destroy();
-            $this->scopeContext?->destroy();
+            // A Destroyable workflow instance may use the Workflow facade from destroy().
+            $savedContext = Facade::getCurrentContext();
+
+            try {
+                $this->makeCurrent();
+                $this->context?->destroy();
+                $this->scopeContext?->destroy();
+            } finally {
+                Workflow::setCurrentContext($savedContext);
+            }
         }
 
         unset(
