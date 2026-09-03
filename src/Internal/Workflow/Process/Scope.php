@@ -74,6 +74,14 @@ class Scope implements CancellationScopeInterface, Destroyable
     private bool $detached = false;
     private bool $cancelled = false;
     private bool $closed = false;
+    private bool $destroyed = false;
+
+    /** @var array<int, true> Handlers that link a child scope or a pending request (kept after close). */
+    private array $internalCancelIDs = [];
+
+    /** @var array<int, true> Links to detached children: only a destruct cancellation reaches them. */
+    private array $detachedLinkIDs = [];
+
     private bool $ownsContext = true;
     private bool $skipInvalidArguments = false;
     private ?\Throwable $cancelReason = null;
@@ -192,6 +200,12 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         if ($this->cancelled) {
+            // A destruct cancellation still has to reach the detached children and pending
+            // requests a cancelled scope keeps.
+            if ($reason instanceof DestructMemorizedInstanceException) {
+                $this->runCancelHandlers($reason);
+            }
+
             return;
         }
 
@@ -264,15 +278,21 @@ class Scope implements CancellationScopeInterface, Destroyable
     /**
      * Connects promise to scope context to be cancelled on promise cancel.
      */
-    public function onAwait(Deferred $deferred): void
+    /**
+     * @param non-empty-string $conditionGroupId
+     */
+    public function onAwait(Deferred $deferred, string $conditionGroupId): void
     {
-        $cancelID = $this->addOnCancel(static function (?\Throwable $e = null) use ($deferred): void {
+        $cancelID = $this->addOnCancel(function (?\Throwable $e = null) use ($deferred, $conditionGroupId): void {
+            // The condition is not pending any more: stop re-evaluating it.
+            $this->context->rejectConditionGroup($conditionGroupId);
             $deferred->reject($e ?? new CanceledFailure(''));
-        });
+        }, internal: true);
 
         $cleanup = function () use ($cancelID): void {
-            unset($this->onCancel[$cancelID]);
+            $this->forgetCancelHandler($cancelID);
             $this->resolveConditionsInScope();
+            $this->unlinkFromParentIfIdle();
         };
 
         $deferred->promise()->then($cleanup, $cleanup);
@@ -280,6 +300,7 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function destroy(): void
     {
+        $this->destroyed = true;
         $this->destroyChildren();
         $this->unwindCoroutine();
         // Unwinding may have started new scopes from finally blocks.
@@ -299,6 +320,8 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         $this->parentUnlink = null;
+        $this->internalCancelIDs = [];
+        $this->detachedLinkIDs = [];
 
         unset(
             $this->context,
@@ -328,8 +351,9 @@ class Scope implements CancellationScopeInterface, Destroyable
             $scope->layer = $layer;
         }
 
-        $cancelID = $this->addOnCancel($scope->cancelFromParent(...), cancellable: !$detached);
+        $cancelID = $this->addOnCancel($scope->cancelFromParent(...), cancellable: !$detached, internal: true);
         $this->children[$cancelID] = $scope;
+        $detached and $this->detachedLinkIDs[$cancelID] = true;
 
         $scope->parentUnlink = function () use ($cancelID): void {
             unset($this->onCancel[$cancelID], $this->children[$cancelID]);
@@ -396,11 +420,12 @@ class Scope implements CancellationScopeInterface, Destroyable
             }
 
             $client->request(new Cancel($request->getID()), $this->scopeContext);
-        }, $cancellable);
+        }, $cancellable, internal: true);
 
         $cleanup = function () use ($cancelID): void {
-            unset($this->onCancel[$cancelID]);
+            $this->forgetCancelHandler($cancelID);
             $this->resolveConditionsInScope();
+            $this->unlinkFromParentIfIdle();
         };
 
         $promise->then($cleanup, $cleanup);
@@ -431,8 +456,13 @@ class Scope implements CancellationScopeInterface, Destroyable
 
         try {
             foreach ($this->orderedCancelHandlers() as $i => $handler) {
+                if (isset($this->detachedLinkIDs[$i]) && !$reason instanceof DestructMemorizedInstanceException) {
+                    // A detached child ignores this cancellation; keep its link for a destruct one.
+                    continue;
+                }
+
                 $this->makeCurrent();
-                unset($this->onCancel[$i]);
+                $this->forgetCancelHandler($i);
                 $handler($reason);
             }
         } finally {
@@ -527,7 +557,7 @@ class Scope implements CancellationScopeInterface, Destroyable
         return [$suspensionID => $handlers[$suspensionID]] + $handlers;
     }
 
-    private function addOnCancel(callable $handler, bool $cancellable = true): int
+    private function addOnCancel(callable $handler, bool $cancellable = true, bool $internal = false): int
     {
         $id = ++$this->cancelID;
 
@@ -546,13 +576,20 @@ class Scope implements CancellationScopeInterface, Destroyable
             return $id;
         }
 
-        if ($this->closed) {
-            // Nothing attached after the scope settled can fire any more.
+        if ($this->closed && !$internal) {
+            // A user callback attached after the scope settled never fires; the links of
+            // requests and scopes started from a settled scope are still kept.
             return $id;
         }
 
         $this->onCancel[$id] = $handler;
+        $internal and $this->internalCancelIDs[$id] = true;
         return $id;
+    }
+
+    private function forgetCancelHandler(int $id): void
+    {
+        unset($this->onCancel[$id], $this->internalCancelIDs[$id], $this->detachedLinkIDs[$id]);
     }
 
     private function nextPromise(PromiseInterface $promise, bool $interruptOnCancel): void
@@ -574,7 +611,7 @@ class Scope implements CancellationScopeInterface, Destroyable
 
         $cleanup = function () use (&$cancelID): void {
             if ($cancelID !== null) {
-                unset($this->onCancel[$cancelID]);
+                $this->forgetCancelHandler($cancelID);
                 if ($this->suspensionCancelID === $cancelID) {
                     $this->suspensionCancelID = null;
                 }
@@ -591,6 +628,10 @@ class Scope implements CancellationScopeInterface, Destroyable
             $cleanup();
             $this->defer(
                 function () use ($result): void {
+                    if ($this->destroyed) {
+                        return;
+                    }
+
                     $this->makeCurrent();
 
                     try {
@@ -615,6 +656,10 @@ class Scope implements CancellationScopeInterface, Destroyable
             $cleanup();
             $this->defer(
                 function () use ($e): void {
+                    if ($this->destroyed) {
+                        return;
+                    }
+
                     if ($e instanceof TemporalFailure && !$e->hasOriginalStackTrace()) {
                         $e->setOriginalStackTrace($this->context->getStackTrace());
                     }
@@ -692,8 +737,9 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $onClose = $this->onClose;
         $this->onClose = [];
-        // Handlers of pending requests and running children stay: cancel() of a settled scope
-        // forwards to them. They remove themselves when the request or child settles.
+        // Links of pending requests and running children stay: cancel() of a settled scope
+        // forwards to them, and they remove themselves when the request or child settles.
+        $this->onCancel = \array_intersect_key($this->onCancel, $this->internalCancelIDs);
         unset($this->coroutine);
 
         try {
@@ -727,6 +773,10 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private function defer(\Closure $tick): void
     {
+        if ($this->destroyed) {
+            return;
+        }
+
         $this->services->loop->once($this->layer, $tick);
 
         if ($this->services->queue->count() !== 0) {
@@ -746,7 +796,8 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private function unlinkFromParentIfIdle(): void
     {
-        if ($this->children !== [] || $this->parentUnlink === null) {
+        // A settled scope stays linked while it has running children or pending requests.
+        if (!$this->closed || $this->children !== [] || $this->internalCancelIDs !== [] || $this->parentUnlink === null) {
             return;
         }
 

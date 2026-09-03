@@ -14,6 +14,7 @@ use Temporal\DataConverter\ValuesInterface;
 use Temporal\Exception\DestructMemorizedInstanceException;
 use Temporal\Exception\ExceptionInterceptor;
 use Temporal\Exception\Failure\CanceledFailure;
+use Temporal\Exception\InvalidSuspendException;
 use Temporal\Interceptor\SimplePipelineProvider;
 use Temporal\Internal\Declaration\Prototype\WorkflowPrototype;
 use Temporal\Internal\Declaration\WorkflowInstance\QueryDispatcher;
@@ -419,6 +420,136 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         });
 
         self::assertSame(['unwound', 'oncancel fired'], $log);
+    }
+
+    public function testCallbacksDeferredPastDestroyAreDropped(): void
+    {
+        $gate = new Deferred();
+
+        $this->startRoot(static function () use ($gate): void {
+            // Not interruptible: only destroy() unwinds this wait.
+            Workflow::asyncDetached(static function () use ($gate): void {
+                Workflow::await($gate->promise());
+            })->await();
+        });
+
+        // A non-empty command queue postpones every resume callback to the next tick.
+        $this->factory->getQueue()->push(new \Temporal\Internal\Transport\Request\NewTimer(
+            new \Temporal\Internal\Workflow\AwaitOptions(new \DateInterval('PT1S'), null),
+        ));
+        $this->root->destroy();
+
+        // The next activation runs the postponed callback against the destroyed scope.
+        $this->factory->tick();
+        self::assertTrue(true);
+    }
+
+    public function testDestructCancellationPassesThroughAnAlreadyCancelledScope(): void
+    {
+        $detachedUnwound = false;
+
+        $this->startRoot(static function () use (&$detachedUnwound): void {
+            Workflow::asyncDetached(static function () use (&$detachedUnwound): void {
+                try {
+                    Workflow::await(static fn(): bool => false);
+                } catch (DestructMemorizedInstanceException) {
+                    $detachedUnwound = true;
+                }
+            });
+
+            try {
+                Workflow::await(static fn(): bool => false);
+            } catch (CanceledFailure) {
+                // recovered, keep waiting
+            }
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        $this->root->cancel();
+        self::assertFalse($detachedUnwound);
+
+        $this->root->cancel(new DestructMemorizedInstanceException());
+
+        self::assertTrue($detachedUnwound, 'The destruct cancellation did not reach the detached child.');
+    }
+
+    public function testSuspendingFromACallbackSettledInsideAnotherScopeIsRejected(): void
+    {
+        $failure = null;
+        $rootDone = false;
+
+        $gate = new Deferred();
+
+        $this->startRoot(static function () use ($gate, &$failure, &$rootDone): void {
+            $child = Workflow::async(static function () use ($gate): int {
+                Workflow::await($gate->promise());
+                return 1;
+            });
+            $child->then(static function () use (&$failure): void {
+                try {
+                    Workflow::timer(5);
+                } catch (\Throwable $e) {
+                    $failure = $e;
+                }
+            });
+
+            // Settles the child inside this fiber: its then() callback runs here, under the
+            // child's context, and must not be able to suspend the root fiber.
+            $gate->resolve(null);
+
+            $rootDone = true;
+        });
+
+        self::assertTrue($rootDone);
+        self::assertInstanceOf(InvalidSuspendException::class, $failure);
+        self::assertSame(0, $this->factory->getQueue()->count());
+    }
+
+    public function testASettledScopeStaysLinkedWhileItsUnawaitedRequestIsPending(): void
+    {
+        $this->startRoot(static function (): void {
+            Workflow::async(static function (): void {
+                Workflow::newUntypedActivityStub(
+                    \Temporal\Activity\ActivityOptions::new()->withStartToCloseTimeout(5),
+                )->executeAsync('act');
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        // The activity command was sent; the scope that issued it has settled.
+        $sent = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertCount(1, $sent);
+
+        $this->root->cancel();
+
+        $cancels = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertContainsOnlyInstancesOf(Cancel::class, $cancels);
+        self::assertCount(1, $cancels, 'The pending activity of the settled scope was not cancelled.');
+    }
+
+    public function testACancelledAwaitConditionIsNotEvaluatedAgain(): void
+    {
+        $evaluations = 0;
+
+        $this->startRoot(static function () use (&$evaluations): void {
+            $scope = Workflow::async(static function () use (&$evaluations): void {
+                Workflow::await(static function () use (&$evaluations): bool {
+                    ++$evaluations;
+                    return false;
+                });
+            });
+            $scope->cancel();
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        $after = $evaluations;
+        $this->scopeContext->resolveConditions();
+        $this->scopeContext->resolveConditions();
+
+        self::assertSame($after, $evaluations, 'A cancelled condition kept being evaluated.');
     }
 
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void

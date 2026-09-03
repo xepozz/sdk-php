@@ -53,6 +53,10 @@ final class FeatureFlags
     /**
      * Throw {@see DestructMemorizedInstanceException} when a Workflow instance is destructed.
      *
+     * With the Fiber runtime the exception is always delivered into suspended workflow Fibers when
+     * the workflow is destroyed, so that they unwind; this flag only controls whether it is also
+     * propagated through scope cancellation when the destroy request arrives.
+     *
      * @since SDK 2.16.0
      */
     public static bool $throwDestructMemorizedInstanceException = true;

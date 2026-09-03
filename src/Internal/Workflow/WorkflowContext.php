@@ -190,9 +190,13 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         );
     }
 
-    public function setReadonly(bool $value = true): static
+    /**
+     * @param non-empty-string|null $reason What makes the context read-only, for the error message.
+     */
+    public function setReadonly(bool $value = true, ?string $reason = null): static
     {
         $this->readonly = $value;
+        $this->readonlyReason = $value ? $reason : null;
         return $this;
     }
 
@@ -292,14 +296,13 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
         try {
             if (!$this->isReplaying()) {
-                $value = self::callReadOnly(
-                    fn(): mixed => $this->callsInterceptor->with(
-                        $closure,
-                        /** @see WorkflowOutboundCallsInterceptor::sideEffect() */
-                        'sideEffect',
-                    )(new SideEffectInput($closure, $options)),
-                    'a side effect callback',
-                );
+                // Only the user callback is read-only; an interceptor around it may still issue commands.
+                $guarded = static fn(): mixed => self::callReadOnly($closure, 'a side effect callback');
+                $value = $this->callsInterceptor->with(
+                    $guarded,
+                    /** @see WorkflowOutboundCallsInterceptor::sideEffect() */
+                    'sideEffect',
+                )(new SideEffectInput($guarded, $options));
             }
         } catch (\Throwable $e) {
             return reject($e);

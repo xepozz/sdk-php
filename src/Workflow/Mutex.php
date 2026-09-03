@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Temporal\Workflow;
 
+use Temporal\Internal\Support\Facade;
 use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Workflow;
 
@@ -89,6 +90,12 @@ final class Mutex
     public function unlock(): void
     {
         $this->locked = false;
+
+        // Wake the next waiter even when released outside a scope step (e.g. from a promise callback).
+        $context = Facade::getCurrentContext();
+        if ($context instanceof WorkflowContext) {
+            $context->resolveConditions();
+        }
     }
 
     /**
