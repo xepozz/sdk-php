@@ -109,17 +109,20 @@ call inside a query fails the query and leaves the workflow intact.
   settle the promise. Calling `Workflow::async()`, `Workflow::executeActivity()`
   or any other suspending facade API from one throws `InvalidSuspendException`
   before any command is created: the facade checks that the running fiber
-  belongs to the current scope. Move the follow-up into the scope that awaits
-  the promise. (The promise-based `WorkflowContextInterface` obtained from
+  belongs to the current scope. The only callback that may suspend is one that
+  runs synchronously inside the fiber of the scope that registered it, where it
+  behaves like inline code. Move the follow-up into the scope that awaits the
+  promise. (The promise-based `WorkflowContextInterface` obtained from
   `Workflow::getCurrentContext()` is not guarded the same way; a request made
   through it from a callback is attached to the callback's scope.)
 - **Side effect callbacks and await conditions are read-only.** A suspending or
   command-sending call, or `Workflow::async()`, inside `Workflow::sideEffect(fn)`
   or a `Workflow::await(fn)` condition throws a `RuntimeException` naming the
   callback kind before any command is created. A condition that throws on the
-  first evaluation throws to the caller; one that throws when the scheduler
-  re-evaluates it fails the workflow task, as in the generator runtime and the
-  Java SDK.
+  first evaluation throws to the caller; one that throws on a later evaluation
+  surfaces from the scheduler step that evaluated it: out of the `Workflow::async()`
+  call that started a scope, or as a workflow task failure when a loop callback
+  evaluated it. This matches the generator runtime.
 - **Awaiting inside a cancelled scope.** After a scope is cancelled every
   `Workflow::await()`, `Workflow::timer()`, activity, child workflow and signal
   call inside it throws `CanceledFailure` immediately, including
@@ -146,14 +149,16 @@ call inside a query fails the query and leaves the workflow intact.
   still running: cancellation and destruction reach them through the parent
   chain, and `cancel()` on the completed scope itself cancels them.
 - **Foreign suspensions fail the scope.** A `Fiber::suspend()` that does not
-  come from the SDK (an async HTTP client, a fiber-based event loop) fails the
-  workflow task with `InvalidSuspendException`.
+  come from the SDK (an async HTTP client, a fiber-based event loop) rejects the
+  scope with `InvalidSuspendException`; in the main scope that fails the
+  workflow execution, in a child scope the parent can catch it.
 - **`WorkflowInboundCallsInterceptor::handleUpdate()`** now receives the
   handler's resolved value from `$next()` instead of a generator.
 - **Workflow destruction.** When a workflow is evicted from the worker its
   suspended fibers are unwound with `DestructMemorizedInstanceException` until
   they terminate; `finally` blocks run, a `finally` that suspends again receives
-  the exception again. This happens regardless of
+  the exception again (at most 64 times, then the engine force-closes the
+  fiber). This happens regardless of
   `FeatureFlags::$throwDestructMemorizedInstanceException`: the flag only
   controls whether the exception is also delivered through scope cancellation
   at the start of the destroy activation. A generator was dropped silently; a
@@ -166,9 +171,9 @@ call inside a query fails the query and leaves the workflow intact.
 Command sequences are unchanged for the recorded scenarios in
 `tests/Fixtures/history/generator` (activities, timers, side effects, versions,
 child workflows, signals, updates, continue-as-new, scope and client
-cancellations). Two behaviours changed on purpose and produce a different
-command sequence for code that relied on them; a running execution written
-that way must be drained before the upgrade or versioned with
+cancellations). One behaviour changed on purpose and produces a different
+command sequence for code that relied on it; a running execution written that
+way must be drained before the upgrade or versioned with
 `Workflow::getVersion()`:
 
 - `Workflow::sideEffect()`, `Workflow::getVersion()` and `Workflow::uuid()` in a

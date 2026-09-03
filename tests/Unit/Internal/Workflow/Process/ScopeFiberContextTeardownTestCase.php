@@ -45,6 +45,7 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
     private WorkerFactoryMock $factory;
     private ContextTeardownRootScope $root;
     private ScopeContext $scopeContext;
+    private ContextTeardownWorkflowContext $context;
     private \PHPUnit\Framework\MockObject\MockObject $instance;
 
     public function testResolvingAPromiseAwaitedByAnotherScopeKeepsTheCallerContext(): void
@@ -552,6 +553,141 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertSame($after, $evaluations, 'A cancelled condition kept being evaluated.');
     }
 
+    public function testASettledScopeUnlinksFromItsParentOnceItsLastChildFinishes(): void
+    {
+        $gate = new Deferred();
+
+        $this->startRoot(static function () use ($gate): void {
+            Workflow::async(static function () use ($gate): string {
+                Workflow::async(static fn() => Workflow::await($gate->promise()));
+                return 'settled';
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        self::assertSame(1, $this->childCount($this->root));
+
+        $gate->resolve(null);
+        $this->flush();
+
+        self::assertSame(0, $this->childCount($this->root), 'The settled scope stayed linked to the root.');
+    }
+
+    public function testATimedOutAwaitWithTimeoutLeavesNoLinkBehind(): void
+    {
+        $this->startRoot(static function (): void {
+            Workflow::async(static function (): bool {
+                return Workflow::awaitWithTimeout(10, static fn(): bool => false);
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        // The scope's condition and the root's own wait are pending.
+        self::assertSame(2, $this->context->pendingConditionCount());
+
+        $timer = \iterator_to_array($this->factory->getQueue(), false)[0];
+        $this->factory->getClient()->dispatch(new SuccessResponse(
+            EncodedValues::empty(),
+            $timer->getID(),
+            new TickInfo(new \DateTimeImmutable()),
+        ));
+        $this->flush();
+
+        self::assertSame(0, $this->childCount($this->root), 'The timed-out scope stayed linked to the root.');
+        self::assertSame(1, $this->context->pendingConditionCount(), 'The timed-out condition is still pending.');
+    }
+
+    public function testUnlockingAMutexInsideAConditionDoesNotSpin(): void
+    {
+        $mutex = new \Temporal\Workflow\Mutex();
+        $acquired = false;
+
+        $this->startRoot(static function () use ($mutex, &$acquired): void {
+            $mutex->lock();
+
+            Workflow::async(static function () use ($mutex, &$acquired): void {
+                $mutex->lock();
+                $acquired = true;
+            });
+
+            // Releasing from a condition is pointless but must not hang the activation.
+            Workflow::await(static function () use ($mutex): bool {
+                $mutex->unlock();
+                return false;
+            });
+        });
+        $this->flush();
+
+        self::assertTrue($acquired);
+    }
+
+    public function testThenOnAnotherScopesSettledResultKeepsTheCallerContext(): void
+    {
+        $collected = [];
+        $done = false;
+
+        $this->startRoot(static function () use (&$collected, &$done): void {
+            $shared = null;
+            Workflow::async(static function () use (&$shared): void {
+                $shared = Workflow::getCurrentContext()->timer(5);
+            });
+
+            Workflow::await($shared);
+            // Settled result of another scope: the callback runs synchronously, in this fiber.
+            $shared->then(static function (mixed $value) use (&$collected): void {
+                $collected[] = $value;
+            });
+
+            Workflow::await(static fn(): bool => true);
+            $done = true;
+        });
+        $timer = \iterator_to_array($this->factory->getQueue(), false)[0];
+        $this->factory->getClient()->dispatch(new SuccessResponse(
+            EncodedValues::empty(),
+            $timer->getID(),
+            new TickInfo(new \DateTimeImmutable()),
+        ));
+        $this->flush();
+
+        self::assertCount(1, $collected);
+        self::assertTrue($done, 'The root fiber could not suspend after the foreign callback ran.');
+    }
+
+    public function testDestructCancellationReachesADetachedGrandchildAfterAPlainCancellation(): void
+    {
+        $seen = null;
+
+        $this->startRoot(static function () use (&$seen): void {
+            Workflow::async(static function () use (&$seen): void {
+                Workflow::asyncDetached(static function () use (&$seen): void {
+                    try {
+                        Workflow::await(static fn(): bool => false);
+                    } catch (\Throwable $e) {
+                        $seen = $e;
+                    }
+                });
+
+                Workflow::await(static fn(): bool => false);
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        $this->root->cancel();
+        self::assertNull($seen);
+
+        $this->root->cancel(new DestructMemorizedInstanceException());
+
+        self::assertInstanceOf(DestructMemorizedInstanceException::class, $seen);
+    }
+
+    private function childCount(Scope $scope): int
+    {
+        return \Closure::bind(static fn(Scope $s): int => \count($s->children), null, Scope::class)($scope);
+    }
+
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void
     {
         $childCancelled = false;
@@ -672,7 +808,7 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
             ->willReturn(new UpdateDispatcher($prototype, $workflow));
         $this->instance = $instance;
 
-        $context = new WorkflowContext(
+        $context = new ContextTeardownWorkflowContext(
             $services,
             $services->client,
             $instance,
@@ -680,6 +816,7 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
             EncodedValues::empty(),
         );
         $context->setReadonly(false);
+        $this->context = $context;
         $this->root = new ContextTeardownRootScope($services);
         $this->scopeContext = $this->root->bind($context);
     }
@@ -713,5 +850,13 @@ final class ContextTeardownRootScope extends Scope
         $this->setContext($context);
 
         return $this->scopeContext;
+    }
+}
+
+final class ContextTeardownWorkflowContext extends WorkflowContext
+{
+    public function pendingConditionCount(): int
+    {
+        return \array_sum(\array_map(\count(...), $this->awaits));
     }
 }

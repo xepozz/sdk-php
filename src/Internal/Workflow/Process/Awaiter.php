@@ -71,7 +71,14 @@ final class Awaiter
             );
         }
 
-        if (self::$managedFibers[$fiber] !== Workflow::getCurrentContext()) {
+        $context = Workflow::getCurrentContext();
+
+        if ($context instanceof WorkflowContext) {
+            // A read-only callback (condition, side effect, query) reports itself first.
+            $context->assertWritable();
+        }
+
+        if (self::$managedFibers[$fiber] !== $context) {
             // A promise callback settled from inside another scope's fiber would suspend that fiber
             // and attach its commands to the wrong scope. Checked before any command is created.
             throw new InvalidSuspendException(

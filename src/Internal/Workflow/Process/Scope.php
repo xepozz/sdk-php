@@ -284,8 +284,8 @@ class Scope implements CancellationScopeInterface, Destroyable
     public function onAwait(Deferred $deferred, string $conditionGroupId): void
     {
         $cancelID = $this->addOnCancel(function (?\Throwable $e = null) use ($deferred, $conditionGroupId): void {
-            // The condition is not pending any more: stop re-evaluating it.
-            $this->context->rejectConditionGroup($conditionGroupId);
+            // The await is over: no condition of the group is evaluated again.
+            $this->context->rejectConditionGroup($conditionGroupId, $e ?? new CanceledFailure(''));
             $deferred->reject($e ?? new CanceledFailure(''));
         }, internal: true);
 
@@ -356,7 +356,8 @@ class Scope implements CancellationScopeInterface, Destroyable
         $detached and $this->detachedLinkIDs[$cancelID] = true;
 
         $scope->parentUnlink = function () use ($cancelID): void {
-            unset($this->onCancel[$cancelID], $this->children[$cancelID]);
+            $this->forgetCancelHandler($cancelID);
+            unset($this->children[$cancelID]);
 
             // The last running child of a settled scope releases the settled scope as well.
             if ($this->closed) {
@@ -462,7 +463,9 @@ class Scope implements CancellationScopeInterface, Destroyable
                 }
 
                 $this->makeCurrent();
-                $this->forgetCancelHandler($i);
+                // Links of children and requests are removed by their own settlement, so a later
+                // destruct cancellation still reaches them; everything else fires once.
+                isset($this->internalCancelIDs[$i]) or $this->forgetCancelHandler($i);
                 $handler($reason);
             }
         } finally {
