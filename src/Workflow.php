@@ -363,6 +363,19 @@ final class Workflow extends Facade
      * await settles on the first *settled* condition, so a rejected promise condition is propagated
      * instead of being ignored. To wait for the first *fulfilled* condition in that mode, combine
      * the conditions explicitly: `Workflow::await(\Temporal\Promise::any([$a, $b]))`.
+     *
+     * A condition callback is evaluated under a read-only context: it must not suspend or send
+     * commands. A promise condition is the bridge from the promise-based
+     * {@see WorkflowContextInterface} and the `...Async()` stub methods to a blocking call:
+     * `$value = Workflow::await($stub->executeAsync())`.
+     *
+     * @template T
+     * @param (callable(): bool)|Mutex|PromiseInterface<T> ...$conditions
+     * @return ($conditions is array<PromiseInterface<T>> ? T : (T|bool)) The value of the settled
+     *         promise when only promises are awaited, `true` when a callback or mutex condition
+     *         unblocked the await.
+     *
+     * @throws OutOfContextException in the absence of the workflow execution context.
      */
     public static function await(callable|Mutex|PromiseInterface ...$conditions): mixed
     {
