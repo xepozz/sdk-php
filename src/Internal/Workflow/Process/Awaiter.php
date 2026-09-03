@@ -40,6 +40,11 @@ final class Awaiter
 
         $context = Workflow::getCurrentContext();
 
+        if ($context instanceof WorkflowContext) {
+            // Read-only contexts (side effect callbacks, await conditions, queries) must not suspend.
+            $context->assertWritable();
+        }
+
         try {
             /** @var T $result */
             $result = \Fiber::suspend(new FiberSuspension($promise, $interruptOnCancel));
