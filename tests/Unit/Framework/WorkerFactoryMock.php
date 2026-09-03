@@ -45,6 +45,7 @@ use Temporal\Worker\Transport\Command\ServerResponseInterface;
 use Temporal\Worker\WorkerFactoryInterface;
 use Temporal\Worker\WorkerInterface;
 use Temporal\Worker\WorkerOptions;
+use Temporal\Workflow;
 
 /**
  * @internal
@@ -237,7 +238,11 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
             }
         }
 
-        $this->tick();
+        try {
+            $this->tick();
+        } finally {
+            Workflow::setCurrentContext(null);
+        }
 
         return $this->responses;
     }
