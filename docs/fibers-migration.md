@@ -105,10 +105,14 @@ call inside a query fails the query and leaves the workflow intact.
   handler that returns a `Generator` or a promise fails with
   `InvalidSuspendException`. There is no compatibility mode.
 - **A promise callback cannot suspend.** `then()`, `catch()` and `finally()`
-  callbacks run outside any workflow fiber. Calling `Workflow::async()`,
-  `Workflow::executeActivity()` or any other suspending API from one throws
-  `InvalidSuspendException`. Move the follow-up into the scope that awaits the
-  promise.
+  callbacks run outside any workflow fiber, or inside the fiber that happened to
+  settle the promise. Calling `Workflow::async()`, `Workflow::executeActivity()`
+  or any other suspending facade API from one throws `InvalidSuspendException`
+  before any command is created: the facade checks that the running fiber
+  belongs to the current scope. Move the follow-up into the scope that awaits
+  the promise. (The promise-based `WorkflowContextInterface` obtained from
+  `Workflow::getCurrentContext()` is not guarded the same way; a request made
+  through it from a callback is attached to the callback's scope.)
 - **Side effect callbacks and await conditions are read-only.** A suspending or
   command-sending call, or `Workflow::async()`, inside `Workflow::sideEffect(fn)`
   or a `Workflow::await(fn)` condition throws a `RuntimeException` naming the
@@ -149,7 +153,12 @@ call inside a query fails the query and leaves the workflow intact.
 - **Workflow destruction.** When a workflow is evicted from the worker its
   suspended fibers are unwound with `DestructMemorizedInstanceException` until
   they terminate; `finally` blocks run, a `finally` that suspends again receives
-  the exception again.
+  the exception again. This happens regardless of
+  `FeatureFlags::$throwDestructMemorizedInstanceException`: the flag only
+  controls whether the exception is also delivered through scope cancellation
+  at the start of the destroy activation. A generator was dropped silently; a
+  suspended Fiber cannot be, so code that catches `\Throwable` around a
+  suspending call sees this exception on eviction and should rethrow it.
 - **`Temporal\Experiments\Fibers`** and generator support classes are removed.
 
 ## Replaying histories of the generator runtime

@@ -30,7 +30,7 @@ final class WorkerFactoryLoopTestCase extends TestCase
         });
         $fiber->start();
 
-        Awaiter::register($fiber);
+        Awaiter::register($fiber, new \stdClass());
 
         try {
             $fiber->resume();

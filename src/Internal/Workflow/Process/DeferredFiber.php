@@ -28,6 +28,7 @@ use Temporal\Workflow\WorkflowContextInterface;
 final class DeferredFiber
 {
     private \Fiber $fiber;
+    private object $context;
 
     /** @var list<\Closure(\Throwable): mixed> */
     private array $catchers = [];
@@ -43,6 +44,7 @@ final class DeferredFiber
         WorkflowContextInterface $context,
     ): self {
         $self = new self();
+        $self->context = $context;
         $self->fiber = new \Fiber(static function () use ($handler, $values, $context): mixed {
             Workflow::setCurrentContext($context);
 
@@ -78,7 +80,7 @@ final class DeferredFiber
             throw new \LogicException('Cannot start a workflow Fiber more than once.');
         }
 
-        Awaiter::register($this->fiber);
+        Awaiter::register($this->fiber, $this->context);
 
         try {
             return $this->fiber->start();

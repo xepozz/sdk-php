@@ -141,7 +141,7 @@ class ScopeContext extends WorkflowContext implements ScopedContextInterface
     {
         $deferred = new Deferred();
         $this->parent->awaits[$conditionGroupId][] = [$condition, $deferred];
-        $this->scope->onAwait($deferred);
+        $this->scope->onAwait($deferred, $conditionGroupId);
 
         return new CompletableResult(
             $this,

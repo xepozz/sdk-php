@@ -24,7 +24,7 @@ use Temporal\Workflow;
  */
 final class Awaiter
 {
-    /** @var \WeakMap<\Fiber, true>|null */
+    /** @var \WeakMap<\Fiber, object>|null Managed fibers mapped to the scope context they run in. */
     private static ?\WeakMap $managedFibers = null;
 
     private function __construct() {}
@@ -70,6 +70,15 @@ final class Awaiter
                 . 'This one was called from a promise callback or another unmanaged context.',
             );
         }
+
+        if (self::$managedFibers[$fiber] !== Workflow::getCurrentContext()) {
+            // A promise callback settled from inside another scope's fiber would suspend that fiber
+            // and attach its commands to the wrong scope. Checked before any command is created.
+            throw new InvalidSuspendException(
+                'Temporal workflow APIs that suspend execution can only be called from the scope that '
+                . 'owns the running Fiber. This one was called from a promise callback of another scope.',
+            );
+        }
     }
 
     public static function isManaged(): bool
@@ -79,15 +88,18 @@ final class Awaiter
         return $fiber !== null && self::$managedFibers !== null && isset(self::$managedFibers[$fiber]);
     }
 
-    public static function register(\Fiber $fiber): void
+    /**
+     * @param object $context The scope context the fiber runs in.
+     */
+    public static function register(\Fiber $fiber, object $context): void
     {
         if (self::$managedFibers === null) {
-            /** @var \WeakMap<\Fiber, true> $fibers */
+            /** @var \WeakMap<\Fiber, object> $fibers */
             $fibers = new \WeakMap();
             self::$managedFibers = $fibers;
         }
 
-        self::$managedFibers[$fiber] = true;
+        self::$managedFibers[$fiber] = $context;
     }
 
     public static function unregister(\Fiber $fiber): void
