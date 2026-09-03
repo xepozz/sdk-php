@@ -64,11 +64,15 @@ class ScopeContext extends WorkflowContext implements ScopedContextInterface
 
     public function async(callable $handler): CancellationScopeInterface
     {
+        $this->assertWritable();
+
         return $this->scope->startScope($handler, false);
     }
 
     public function asyncDetached(callable $handler): CancellationScopeInterface
     {
+        $this->assertWritable();
+
         return $this->scope->startScope($handler, true);
     }
 
@@ -78,6 +82,9 @@ class ScopeContext extends WorkflowContext implements ScopedContextInterface
         bool $cancellable = true,
         bool $waitResponse = true,
     ): PromiseInterface {
+        // Checked here, before the command is created: the parent context is always writable.
+        $this->assertWritable();
+
         $cancellable && $this->scope->isCancelled() && throw new CanceledFailure(
             'Attempt to send request to cancelled scope',
         );

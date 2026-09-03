@@ -21,6 +21,7 @@ use Temporal\Internal\Declaration\WorkflowInstance\SignalDispatcher;
 use Temporal\Internal\Declaration\WorkflowInstance\UpdateDispatcher;
 use Temporal\Internal\Declaration\WorkflowInstanceInterface;
 use Temporal\Internal\ServiceContainer;
+use Temporal\Internal\Transport\Request\Cancel;
 use Temporal\Internal\Transport\Request\GetVersion;
 use Temporal\Internal\Transport\Request\SideEffect;
 use Temporal\Internal\Workflow\Input;
@@ -29,6 +30,7 @@ use Temporal\Internal\Workflow\ScopeContext;
 use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Tests\Unit\Framework\WorkerFactoryMock;
 use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Worker\Transport\Command\Server\FailureResponse;
 use Temporal\Worker\Transport\Command\Server\SuccessResponse;
 use Temporal\Worker\Transport\Command\Server\TickInfo;
 use Temporal\Worker\FeatureFlags;
@@ -285,6 +287,115 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
 
         self::assertInstanceOf(ScopeContext::class, $seen);
         self::assertSame($before, Workflow::getCurrentContext(), 'destroy() must restore the caller context.');
+    }
+
+    public function testRootCancellationReachesAScopeStartedByAnAlreadyCompletedScope(): void
+    {
+        $grandchildCancelled = false;
+
+        $this->startRoot(static function () use (&$grandchildCancelled): string {
+            Workflow::async(static function () use (&$grandchildCancelled): string {
+                Workflow::async(static function () use (&$grandchildCancelled): void {
+                    try {
+                        Workflow::await(static fn(): bool => false);
+                    } catch (CanceledFailure) {
+                        $grandchildCancelled = true;
+                    }
+                });
+
+                return 'intermediate done';
+            });
+
+            Workflow::await(static fn(): bool => false);
+
+            return 'done';
+        });
+
+        $this->root->cancel();
+        $this->flush();
+
+        self::assertTrue($grandchildCancelled, 'Cancellation did not pass through the completed intermediate scope.');
+    }
+
+    public function testDestroyReachesAScopeStartedByAnAlreadyCompletedScope(): void
+    {
+        $log = [];
+        $gcWasEnabled = \gc_enabled();
+        \gc_disable();
+
+        try {
+            $this->startRoot(static function () use (&$log): string {
+                Workflow::async(static function () use (&$log): string {
+                    Workflow::async(static function () use (&$log): void {
+                        try {
+                            Workflow::await(static fn(): bool => false);
+                        } finally {
+                            $log[] = 'grandchild finally';
+                        }
+                    });
+
+                    return 'intermediate done';
+                });
+
+                Workflow::await(static fn(): bool => false);
+
+                return 'done';
+            });
+
+            $this->root->destroy();
+        } finally {
+            $gcWasEnabled and \gc_enable();
+        }
+
+        self::assertSame(['grandchild finally'], $log);
+    }
+
+    public function testChildWorkflowResultWaitIsSettledByTheServerWhenTheRequestIsCancellable(): void
+    {
+        $scope = null;
+        $failure = null;
+        $interruptedSynchronously = null;
+
+        $this->startRoot(static function () use (&$scope, &$failure, &$interruptedSynchronously): void {
+            $scope = Workflow::async(static function () use (&$failure): void {
+                try {
+                    Workflow::executeChildWorkflow('child');
+                } catch (CanceledFailure $e) {
+                    $failure = $e;
+                }
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        // The start commands were sent to the server.
+        $commands = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertCount(2, $commands);
+
+        self::assertInstanceOf(CancellationScopeInterface::class, $scope);
+        $scope->cancel();
+        $interruptedSynchronously = $failure !== null;
+        $this->flush();
+
+        // Cancel commands went out (child start and its execution query); the wait is settled
+        // by the server's answer only.
+        self::assertFalse($interruptedSynchronously);
+        self::assertNull($failure);
+        $cancels = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertNotEmpty($cancels);
+        self::assertContainsOnlyInstancesOf(Cancel::class, $cancels);
+
+        // The server answers both the child start and its execution query with the cancellation.
+        foreach ($commands as $command) {
+            $this->factory->getClient()->dispatch(new FailureResponse(
+                new CanceledFailure('child cancelled'),
+                $command->getID(),
+                new TickInfo(new \DateTimeImmutable()),
+            ));
+        }
+        $this->flush();
+
+        self::assertInstanceOf(CanceledFailure::class, $failure);
     }
 
     public function testCancellingACompletedScopeCancelsItsRunningChildren(): void

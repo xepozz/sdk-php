@@ -110,9 +110,12 @@ call inside a query fails the query and leaves the workflow intact.
   `InvalidSuspendException`. Move the follow-up into the scope that awaits the
   promise.
 - **Side effect callbacks and await conditions are read-only.** A suspending or
-  command-sending call inside `Workflow::sideEffect(fn)` or a
-  `Workflow::await(fn)` condition throws a `RuntimeException` naming the callback
-  kind. A condition that throws fails only the await that owns it.
+  command-sending call, or `Workflow::async()`, inside `Workflow::sideEffect(fn)`
+  or a `Workflow::await(fn)` condition throws a `RuntimeException` naming the
+  callback kind before any command is created. A condition that throws on the
+  first evaluation throws to the caller; one that throws when the scheduler
+  re-evaluates it fails the workflow task, as in the generator runtime and the
+  Java SDK.
 - **Awaiting inside a cancelled scope.** After a scope is cancelled every
   `Workflow::await()`, `Workflow::timer()`, activity, child workflow and signal
   call inside it throws `CanceledFailure` immediately, including
@@ -129,8 +132,15 @@ call inside a query fails the query and leaves the workflow intact.
   Java); `Workflow::await($scope)` is (like `Workflow.await()` in Java). Both
   deliver the scope's real outcome, including a value the scope returned after
   catching its own `CanceledFailure`.
-- **`cancel()` of a completed scope** cancels the scopes it started that are
-  still running and is otherwise a no-op.
+- **Waiting for activities and child workflows** is settled by the server's
+  answer to the cancel request, exactly as in the generator runtime, so the
+  command sequence of a cancelled workflow is unchanged. The one exception is a
+  child workflow whose request cannot be cancelled (parent close policy
+  `Abandon` with `FeatureFlags::$cancelAbandonedChildWorkflows` off): its wait
+  is interrupted locally with `CanceledFailure` instead of hanging forever.
+- **A completed scope stays linked to its parent** while scopes it started are
+  still running: cancellation and destruction reach them through the parent
+  chain, and `cancel()` on the completed scope itself cancels them.
 - **Foreign suspensions fail the scope.** A `Fiber::suspend()` that does not
   come from the SDK (an async HTTP client, a fiber-based event loop) fails the
   workflow task with `InvalidSuspendException`.
@@ -141,6 +151,24 @@ call inside a query fails the query and leaves the workflow intact.
   they terminate; `finally` blocks run, a `finally` that suspends again receives
   the exception again.
 - **`Temporal\Experiments\Fibers`** and generator support classes are removed.
+
+## Replaying histories of the generator runtime
+
+Command sequences are unchanged for the recorded scenarios in
+`tests/Fixtures/history/generator` (activities, timers, side effects, versions,
+child workflows, signals, updates, continue-as-new, scope and client
+cancellations). Two behaviours changed on purpose and produce a different
+command sequence for code that relied on them; a running execution written
+that way must be drained before the upgrade or versioned with
+`Workflow::getVersion()`:
+
+- `Workflow::sideEffect()`, `Workflow::getVersion()` and `Workflow::uuid()` in a
+  cancelled scope used to throw `CanceledFailure`; they now record their marker.
+- A scope cancelled in the same activation that queued one of those markers used
+  to drop the queued command; it is now sent.
+
+Run `WorkflowReplayer::replayFromServer()` on representative executions before
+deploying.
 
 ## Performance notes
 

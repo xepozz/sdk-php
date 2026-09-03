@@ -41,6 +41,7 @@ final class ChildWorkflowStub implements ChildWorkflowStubInterface
     private Deferred $execution;
     private ?PromiseInterface $result = null;
     private bool $started = false;
+    private bool $cancellable = true;
     private bool $executionSettled = false;
     private ?\Throwable $startFailure = null;
     private HeaderInterface $header;
@@ -56,6 +57,20 @@ final class ChildWorkflowStub implements ChildWorkflowStubInterface
     ) {
         $this->execution = new Deferred();
         $this->header = \is_array($header) ? Header::fromValues($header) : $header;
+    }
+
+    /**
+     * Whether the child workflow request can be cancelled through the server. When it cannot
+     * (an abandoned child while {@see FeatureFlags::$cancelAbandonedChildWorkflows} is off), a
+     * scope cancellation must interrupt the result wait locally, or it would never settle.
+     *
+     * @internal
+     */
+    public static function isCancellable(?ChildWorkflowOptions $options): bool
+    {
+        return FeatureFlags::$cancelAbandonedChildWorkflows
+            || $options === null
+            || $options->parentClosePolicy !== ParentClosePolicy::Abandon->value;
     }
 
     public function getChildWorkflowType(): string
@@ -101,10 +116,9 @@ final class ChildWorkflowStub implements ChildWorkflowStubInterface
                 $this->header,
             );
 
-            $cancellable = FeatureFlags::$cancelAbandonedChildWorkflows
-                || $this->options->parentClosePolicy !== ParentClosePolicy::Abandon->value;
+            $this->cancellable = self::isCancellable($this->options);
 
-            $this->result = $this->request($request, cancellable: $cancellable);
+            $this->result = $this->request($request, cancellable: $this->cancellable);
 
             $started = $this->request(new GetChildWorkflowExecution($request))
                 ->then(
@@ -138,7 +152,7 @@ final class ChildWorkflowStub implements ChildWorkflowStubInterface
         $this->assertStarted();
         Awaiter::assertManaged();
 
-        return Awaiter::await($this->getResultAsync($returnType));
+        return Awaiter::await($this->getResultAsync($returnType), interruptOnCancel: !$this->cancellable);
     }
 
     public function getResultAsync($returnType = null): PromiseInterface
@@ -158,7 +172,10 @@ final class ChildWorkflowStub implements ChildWorkflowStubInterface
     {
         Awaiter::assertManaged();
 
-        return Awaiter::await($this->executeAsync($args, $returnType));
+        // The start is issued synchronously, so the request's cancellability is known here.
+        $result = $this->executeAsync($args, $returnType);
+
+        return Awaiter::await($result, interruptOnCancel: !$this->cancellable);
     }
 
     public function executeAsync(array $args = [], $returnType = null): PromiseInterface

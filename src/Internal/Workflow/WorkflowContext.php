@@ -200,6 +200,10 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     {
         $clone = clone $this;
         $clone->awaits = &$this->awaits;
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
+        $clone->resolvingConditions = &$this->resolvingConditions;
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
+        $clone->conditionsDirty = &$this->conditionsDirty;
         $clone->trace = &$this->trace;
         $clone->input = $input;
         return $clone;
@@ -722,17 +726,9 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
                             continue;
                         }
 
-                        try {
-                            $unblocked = (bool) self::callReadOnly($condition, 'an await condition');
-                        } catch (\Throwable $e) {
-                            // A failing condition fails the await instead of the whole activation.
-                            unset($this->awaits[$awaitsGroupId][$i]);
-                            $deferred->reject($e);
-                            $this->rejectConditionGroup($awaitsGroupId);
-                            continue;
-                        }
-
-                        if ($unblocked) {
+                        // A condition that throws fails the activation (workflow task), as in the
+                        // generator runtime and the Java SDK.
+                        if (self::callReadOnly($condition, 'an await condition')) {
                             unset($this->awaits[$awaitsGroupId][$i]);
                             $deferred->resolve(null);
                             $this->resolveConditionGroup($awaitsGroupId);
