@@ -193,7 +193,13 @@ final class Environment
 
             $check = new Process([$this->systemInfo->rrExecutable, 'workers', '-c', $configFile]);
             $check->setTimeout(1);
-            $check->run();
+
+            try {
+                $check->run();
+            } catch (ProcessTimedOutException) {
+                // The check did not answer in time: the server is not ready yet, not a failure.
+                return false;
+            }
 
             return \str_contains($check->getOutput(), 'Workers of');
         });
