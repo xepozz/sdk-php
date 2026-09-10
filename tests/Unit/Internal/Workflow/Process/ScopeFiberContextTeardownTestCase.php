@@ -784,6 +784,114 @@ final class ScopeFiberContextTeardownTestCase extends TestCase
         self::assertTrue(true);
     }
 
+    public function testCancellingASettledScopeTwiceSendsOneCancelPerRequest(): void
+    {
+        $scope = null;
+
+        $this->startRoot(static function () use (&$scope): void {
+            // The scope settles at once, but the request it sent is still pending: its link is
+            // kept so the cancellation still reaches it.
+            $scope = Workflow::async(static function (): void {
+                Workflow::newUntypedActivityStub()->executeAsync('act');
+            });
+
+            Workflow::await(static fn(): bool => false);
+        });
+
+        self::assertInstanceOf(CancellationScopeInterface::class, $scope);
+        // The activity start reached the server.
+        self::assertSame(1, $this->factory->getQueue()->count());
+        \iterator_to_array($this->factory->getQueue(), false);
+
+        $scope->cancel();
+        $this->flush();
+
+        $first = \iterator_to_array($this->factory->getQueue(), false);
+        self::assertCount(1, $first);
+        self::assertInstanceOf(Cancel::class, $first[0]);
+
+        // A second cancellation of the settled scope - another scope's cancel reaching it, or the
+        // client cancelling the workflow - must not send the same Cancel again.
+        $scope->cancel();
+        $this->root->cancel();
+        $this->flush();
+
+        self::assertSame(
+            [],
+            \iterator_to_array($this->factory->getQueue(), false),
+            'A settled scope re-sent the Cancel command of a request it had already cancelled.',
+        );
+    }
+
+    public function testAConditionCannotSendACommandThroughAContextItStashed(): void
+    {
+        $error = null;
+        $commandsInCondition = 0;
+
+        $this->startRoot(function () use (&$error, &$commandsInCondition): void {
+            Workflow::async(function () use (&$error, &$commandsInCondition): void {
+                $stashed = Workflow::getCurrentContext();
+                $evaluations = 0;
+
+                Workflow::await(function () use ($stashed, &$error, &$commandsInCondition, &$evaluations): bool {
+                    // Evaluated by whichever scope drives the condition pass; the guard must hold
+                    // for all of them, not only for the context that happens to be current.
+                    $before = $this->factory->getQueue()->count();
+
+                    try {
+                        $stashed->timer(5);
+                    } catch (\Throwable $e) {
+                        $error ??= $e;
+                    }
+
+                    $commandsInCondition += $this->factory->getQueue()->count() - $before;
+
+                    return ++$evaluations > 3;
+                });
+            });
+
+            // The root scope drives further condition passes.
+            Workflow::timer(1);
+            Workflow::await(static fn(): bool => false);
+        });
+
+        $this->flush();
+
+        self::assertSame(0, $commandsInCondition, 'An await condition created a command.');
+        self::assertInstanceOf(\RuntimeException::class, $error);
+        self::assertStringContainsString('an await condition', $error->getMessage());
+    }
+
+    public function testCleanupTouchingADestroyedChildScopeDoesNotFailTheDestruction(): void
+    {
+        $cleanupError = null;
+        $child = null;
+
+        $this->startRoot(static function () use (&$child, &$cleanupError): void {
+            $child = Workflow::async(static function (): void {
+                Workflow::await(static fn(): bool => false);
+            });
+
+            try {
+                Workflow::await(static fn(): bool => false);
+            } finally {
+                // A finally block is the documented place for cleanup on eviction; it may touch
+                // a scope this one started, which the destruction has already taken apart.
+                try {
+                    $child->cancel();
+                    $child->onCancel(static fn() => null);
+                    $child->promise()->then(static fn() => null);
+                } catch (\Throwable $e) {
+                    $cleanupError = $e;
+                }
+            }
+        });
+
+        $this->root->destroy();
+
+        self::assertNull($cleanupError, 'Cleanup on a destroyed child scope must be inert, not fatal.');
+    }
+
     protected function setUp(): void
     {
         $this->factory = new WorkerFactoryMock(DataConverter::createDefault());

@@ -55,6 +55,8 @@ class ScopeContext extends WorkflowContext implements ScopedContextInterface
         $ctx->onRequest = $onRequest;
         $ctx->updateContext = $updateContext;
         $ctx->readonly = $context->readonly;
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
+        $ctx->guardReason = &$context->guardReason;
         $ctx->continueAsNew = $context->continueAsNew;
         $ctx->trace = &$context->trace;
         $ctx->currentDetails = &$context->currentDetails;

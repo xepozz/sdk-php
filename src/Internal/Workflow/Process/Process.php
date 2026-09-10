@@ -59,9 +59,14 @@ class Process extends Scope implements ProcessInterface
                         function (QueryInput $input) use ($handler): mixed {
                             $context = $this->scopeContext
                                 ->withInput(new Input($this->scopeContext->getInfo(), $input->arguments));
-                            $context->setReadonly(true, 'a query handler');
                             Workflow::setCurrentContext($context);
-                            return $handler($input->arguments);
+
+                            // Read-only for the whole activation: a command must not be created
+                            // through any context object while a query handler is running.
+                            return $context->runReadOnly(
+                                static fn(): mixed => $handler($input->arguments),
+                                'a query handler',
+                            );
                         },
                         /** @see WorkflowInboundCallsInterceptor::handleQuery() */
                         'handleQuery',
@@ -269,6 +274,13 @@ class Process extends Scope implements ProcessInterface
 
     protected function complete(mixed $result): void
     {
+        if ($this->destroyed) {
+            // The workflow is being evicted from the worker. Whatever escapes a finally block
+            // while its fibers are unwound must not become a command in the destroy activation's
+            // response: the execution is already gone from the worker's list.
+            return;
+        }
+
         if ($result instanceof \Throwable) {
             if ($result instanceof DestructMemorizedInstanceException) {
                 // do not handle

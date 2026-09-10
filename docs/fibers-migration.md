@@ -114,11 +114,14 @@ call inside a query fails the query and leaves the workflow intact.
   behaves like inline code. Move the follow-up into the scope that awaits the
   promise. (The promise-based `WorkflowContextInterface` obtained from
   `Workflow::getCurrentContext()` is not guarded the same way; a request made
-  through it from a callback is attached to the callback's scope.)
-- **Side effect callbacks and await conditions are read-only.** A suspending or
-  command-sending call, or `Workflow::async()`, inside `Workflow::sideEffect(fn)`
-  or a `Workflow::await(fn)` condition throws a `RuntimeException` naming the
-  callback kind before any command is created. A condition that throws on the
+  through it from a promise callback is attached to the callback's scope.)
+- **Side effect callbacks, await conditions and query handlers are read-only.**
+  A suspending or command-sending call, or `Workflow::async()`, inside
+  `Workflow::sideEffect(fn)`, a `Workflow::await(fn)` condition or a query
+  handler throws a `RuntimeException` naming the callback kind before any
+  command is created. The guard covers the whole activation, so a
+  `WorkflowContextInterface` the workflow stashed earlier does not escape it
+  either. A condition that throws on the
   first evaluation throws to the caller; one that throws on a later evaluation
   surfaces from the scheduler step that evaluated it: out of the `Workflow::async()`
   call that started a scope, or as a workflow task failure when a loop callback
@@ -147,7 +150,9 @@ call inside a query fails the query and leaves the workflow intact.
   is interrupted locally with `CanceledFailure` instead of hanging forever.
 - **A completed scope stays linked to its parent** while scopes it started are
   still running: cancellation and destruction reach them through the parent
-  chain, and `cancel()` on the completed scope itself cancels them.
+  chain, and `cancel()` on the completed scope itself cancels them. It is
+  cancelled once: a second `cancel()`, or one arriving from an ancestor after
+  the first, does not send another `Cancel` command for the same request.
 - **Foreign suspensions fail the scope.** A `Fiber::suspend()` that does not
   come from the SDK (an async HTTP client, a fiber-based event loop) rejects the
   scope with `InvalidSuspendException`; in the main scope that fails the
@@ -163,7 +168,11 @@ call inside a query fails the query and leaves the workflow intact.
   controls whether the exception is also delivered through scope cancellation
   at the start of the destroy activation. A generator was dropped silently; a
   suspended Fiber cannot be, so code that catches `\Throwable` around a
-  suspending call sees this exception on eviction and should rethrow it.
+  suspending call sees this exception on eviction and should rethrow it. A
+  scope that the unwinding code touches may already be destroyed: `cancel()`,
+  `onCancel()` and the promise accessors on it are inert rather than fatal, and
+  a throwable escaping a `finally` during eviction is dropped instead of
+  becoming a command in the destroy activation.
 - **`Temporal\Experiments\Fibers`** and generator support classes are removed.
 
 ## Replaying histories of the generator runtime

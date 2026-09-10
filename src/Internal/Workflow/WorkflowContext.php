@@ -111,6 +111,15 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     /** @var non-empty-string|null What made the context read-only, when it is a user callback. */
     protected ?string $readonlyReason = null;
 
+    /**
+     * What makes the whole activation read-only: a query handler, an await condition or a side
+     * effect callback that is running right now. Shared by reference with every context of the
+     * workflow, so a context stashed by user code cannot be used to escape the guard.
+     *
+     * @var non-empty-string|null
+     */
+    protected ?string $guardReason = null;
+
     protected ?string $currentDetails = null;
     private bool $resolvingConditions = false;
     private bool $conditionsDirty = false;
@@ -183,11 +192,17 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
     public function isReadonly(): bool
     {
-        return $this->readonly;
+        return $this->readonly || $this->guardReason !== null;
     }
 
     public function assertWritable(): void
     {
+        if ($this->guardReason !== null) {
+            throw new \RuntimeException(
+                "Workflow calls that suspend or send commands are not allowed inside $this->guardReason.",
+            );
+        }
+
         if (!$this->readonly) {
             return;
         }
@@ -197,6 +212,31 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
                 ? 'Workflow is not initialized.'
                 : "Workflow calls that suspend or send commands are not allowed inside $this->readonlyReason.",
         );
+    }
+
+    /**
+     * Runs a user callback with the whole activation marked read-only: a call that suspends or
+     * sends a command inside it fails instead of breaking determinism, whichever context object
+     * it is made through.
+     *
+     * @template T
+     * @param callable(): T $callback
+     * @param non-empty-string $what
+     * @return T
+     */
+    public function runReadOnly(callable $callback, string $what): mixed
+    {
+        if ($this->guardReason !== null) {
+            return $callback();
+        }
+
+        $this->guardReason = $what;
+
+        try {
+            return $callback();
+        } finally {
+            $this->guardReason = null;
+        }
     }
 
     /**
@@ -217,6 +257,8 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         $clone->resolvingConditions = &$this->resolvingConditions;
         /** @psalm-suppress UnsupportedPropertyReferenceUsage */
         $clone->conditionsDirty = &$this->conditionsDirty;
+        /** @psalm-suppress UnsupportedPropertyReferenceUsage */
+        $clone->guardReason = &$this->guardReason;
         $clone->trace = &$this->trace;
         $clone->input = $input;
         return $clone;
@@ -867,15 +909,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
             return $callback();
         }
 
-        $context->readonly = true;
-        $context->readonlyReason = $what;
-
-        try {
-            return $callback();
-        } finally {
-            $context->readonly = false;
-            $context->readonlyReason = null;
-        }
+        return $context->runReadOnly($callback, $what);
     }
 
     protected function awaitRequest(callable|Mutex|PromiseInterface ...$conditions): PromiseInterface

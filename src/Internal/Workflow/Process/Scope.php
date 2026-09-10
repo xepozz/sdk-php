@@ -56,6 +56,7 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     protected Deferred $deferred;
     protected DeferredFiber $coroutine;
+    protected bool $destroyed = false;
 
     /** @var non-empty-string */
     private string $layer = LoopInterface::ON_TICK;
@@ -73,8 +74,15 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private bool $detached = false;
     private bool $cancelled = false;
+
+    /** A cancellation is forwarded to the scope's links at most once, per kind. */
+    private bool $cancelForwarded = false;
+
+    private bool $destructForwarded = false;
     private bool $closed = false;
-    private bool $destroyed = false;
+
+    /** Set when {@see destroy()} has taken the scope apart; it is inert from then on. */
+    private bool $torndown = false;
 
     /** @var array<int, true> Handlers that link a child scope or a pending request (kept after close). */
     private array $internalCancelIDs = [];
@@ -176,7 +184,9 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function onCancel(callable $then): self
     {
-        $this->addOnCancel($then);
+        // A destroyed scope holds no state a handler could observe; registering one would fail
+        // on the unset properties instead of being a no-op.
+        $this->torndown or $this->addOnCancel($then);
         return $this;
     }
 
@@ -186,31 +196,47 @@ class Scope implements CancellationScopeInterface, Destroyable
      */
     public function onClose(callable $then): self
     {
-        $this->onClose[] = $then;
+        $this->torndown or $this->onClose[] = $then;
         return $this;
     }
 
     public function cancel(?\Throwable $reason = null): void
     {
-        if ($this->closed) {
-            // The scope has settled, but scopes it started and requests it sent without awaiting
-            // may still be pending: forward the cancellation to them without changing the scope.
+        if ($this->torndown) {
+            // The scope is fully destroyed: there is nothing left to cancel. Cleanup running in
+            // a finally block of another scope must not fatal on it.
+            return;
+        }
+
+        if ($reason instanceof DestructMemorizedInstanceException) {
+            // A destruct cancellation still has to reach the detached children and the pending
+            // requests a cancelled or settled scope keeps, but only once: their links are never
+            // forgotten, so a second pass would reject the same requests twice.
+            if ($this->destructForwarded) {
+                return;
+            }
+
+            $this->destructForwarded = true;
+            $this->closed or $this->cancelled = true;
+            $this->cancelReason ??= $reason;
             $this->runCancelHandlers($reason);
             return;
         }
 
-        if ($this->cancelled) {
-            // A destruct cancellation still has to reach the detached children and pending
-            // requests a cancelled scope keeps.
-            if ($reason instanceof DestructMemorizedInstanceException) {
-                $this->runCancelHandlers($reason);
-            }
-
+        // A scope is cancelled once. A settled scope keeps the links of the scopes it started and
+        // of the requests it sent without awaiting, so the cancellation still reaches them, but
+        // running the handlers twice would send a second Cancel command for the same request.
+        if ($this->cancelForwarded) {
             return;
         }
 
-        $this->cancelled = true;
-        $this->cancelReason = $reason;
+        $this->cancelForwarded = true;
+
+        if (!$this->closed) {
+            $this->cancelled = true;
+            $this->cancelReason = $reason;
+        }
+
         $this->runCancelHandlers($reason);
     }
 
@@ -233,6 +259,13 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function promise(): PromiseInterface
     {
+        if ($this->torndown) {
+            // A destroyed scope has no outcome left to deliver. Returning a promise that never
+            // settles keeps cleanup code inert instead of fatal, and the fiber that awaits it is
+            // unwound by the destruction that destroyed this scope.
+            return (new Deferred())->promise();
+        }
+
         return $this->deferred->promise();
     }
 
@@ -246,17 +279,17 @@ class Scope implements CancellationScopeInterface, Destroyable
         ?callable $onRejected = null,
         ?callable $onProgress = null,
     ): PromiseInterface {
-        return $this->deferred->promise()->then($onFulfilled, $onRejected);
+        return $this->promise()->then($onFulfilled, $onRejected);
     }
 
     public function catch(callable $onRejected): PromiseInterface
     {
-        return $this->deferred->promise()->catch($onRejected);
+        return $this->promise()->catch($onRejected);
     }
 
     public function finally(callable $onFulfilledOrRejected): PromiseInterface
     {
-        return $this->deferred->promise()->finally($onFulfilledOrRejected);
+        return $this->promise()->finally($onFulfilledOrRejected);
     }
 
     /**
@@ -322,6 +355,7 @@ class Scope implements CancellationScopeInterface, Destroyable
         $this->parentUnlink = null;
         $this->internalCancelIDs = [];
         $this->detachedLinkIDs = [];
+        $this->torndown = true;
 
         unset(
             $this->context,

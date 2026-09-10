@@ -45,6 +45,22 @@ class SuspendingQueryTest extends TestCase
         self::assertSame('done', $stub->getResult('string'));
     }
 
+    #[Test]
+    public function queryHandlerCannotSendACommandThroughAStashedContext(
+        #[Stub('Extra_Workflow_SuspendingQuery')] WorkflowStubInterface $stub,
+    ): void {
+        try {
+            $stub->query('stashed')?->getValue(0);
+            self::fail('A query handler must not create a command through a stashed context.');
+        } catch (\Throwable $error) {
+            self::assertStringContainsString('not allowed inside a query handler', self::chainMessage($error));
+        } finally {
+            $stub->signal('exit');
+        }
+
+        self::assertSame('done', $stub->getResult('string'));
+    }
+
     private static function chainMessage(\Throwable $error): string
     {
         $messages = [];
@@ -61,10 +77,12 @@ class SuspendingQueryTest extends TestCase
 class TestWorkflow
 {
     private bool $exit = false;
+    private ?Workflow\WorkflowContextInterface $context = null;
 
     #[WorkflowMethod(name: 'Extra_Workflow_SuspendingQuery')]
     public function handle(): string
     {
+        $this->context = Workflow::getCurrentContext();
         Workflow::await(fn(): bool => $this->exit);
 
         return 'done';
@@ -74,6 +92,16 @@ class TestWorkflow
     public function suspending(): string
     {
         Workflow::await(static fn(): bool => true);
+
+        return 'unreachable';
+    }
+
+    #[Workflow\QueryMethod(name: 'stashed')]
+    public function stashed(): string
+    {
+        // The workflow captured its own context; a query must not be able to use it to create
+        // a command, whichever context object the call is made through.
+        $this->context?->timer(1);
 
         return 'unreachable';
     }
