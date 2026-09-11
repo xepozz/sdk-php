@@ -9,11 +9,13 @@
 
 declare(strict_types=1);
 
-namespace Temporal\Tests\Unit\DTO;
+namespace Temporal\Tests\Unit\Common;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Temporal\Client\ClientOptions;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Worker\WorkerOptions;
 
 final class PayloadLimitOptionsTestCase extends TestCase
 {
@@ -63,6 +65,42 @@ final class PayloadLimitOptionsTestCase extends TestCase
         self::assertFalse($options->isEnabled());
     }
 
+    public function testDisabledHasNoLimits(): void
+    {
+        $options = PayloadLimitOptions::disabled();
+
+        self::assertNull($options->payloadSizeWarning);
+        self::assertNull($options->memoSizeWarning);
+        self::assertFalse($options->isEnabled());
+    }
+
+    public function testClientOptionsWitherDoesNotMutateTheSource(): void
+    {
+        $options = new ClientOptions();
+        $limits = PayloadLimitOptions::new()->withPayloadSizeWarning(1024);
+
+        $result = $options->withPayloadLimits($limits);
+
+        self::assertNotSame($options, $result);
+        self::assertSame($limits, $result->payloadLimits);
+        self::assertNotSame($limits, $options->payloadLimits);
+    }
+
+    public function testWorkerOptionsCarryTheLimits(): void
+    {
+        $options = WorkerOptions::new();
+        $limits = PayloadLimitOptions::disabled();
+
+        $result = $options->withPayloadLimits($limits);
+
+        self::assertNotSame($options, $result);
+        self::assertSame($limits, $result->getPayloadLimits());
+        self::assertSame(
+            PayloadLimitOptions::DEFAULT_PAYLOAD_SIZE_WARNING,
+            $options->getPayloadLimits()->payloadSizeWarning,
+        );
+    }
+
     public function testClientOptionsDisableLimits(): void
     {
         $options = (new ClientOptions())->withPayloadLimits(null);
@@ -79,9 +117,7 @@ final class PayloadLimitOptionsTestCase extends TestCase
         yield [-1];
     }
 
-    /**
-     * @dataProvider nonPositiveValues
-     */
+    #[DataProvider('nonPositiveValues')]
     public function testPayloadWarningRejectsNonPositive(int $value): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -90,9 +126,7 @@ final class PayloadLimitOptionsTestCase extends TestCase
         PayloadLimitOptions::new()->withPayloadSizeWarning($value);
     }
 
-    /**
-     * @dataProvider nonPositiveValues
-     */
+    #[DataProvider('nonPositiveValues')]
     public function testMemoWarningRejectsNonPositive(int $value): void
     {
         $this->expectException(\InvalidArgumentException::class);

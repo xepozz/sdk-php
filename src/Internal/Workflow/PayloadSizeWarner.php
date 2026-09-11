@@ -21,9 +21,9 @@ use Temporal\Worker\Transport\Command\RequestInterface;
 /**
  * Warns when a command produced by a Workflow carries payloads larger than the configured limit.
  *
- * The payloads are measured the same way the server measures them, and the conversion result is
- * reused when the command is encoded, so the check does not serialize the values twice. Replayed
- * commands are skipped entirely: they are not sent to the server, so there is nothing to warn about.
+ * The payloads are measured the same way the server measures them, so the check costs one extra
+ * conversion per command that carries payloads. Replayed commands are skipped entirely: they are
+ * not sent to the server, so there is nothing to warn about.
  *
  * @internal
  */

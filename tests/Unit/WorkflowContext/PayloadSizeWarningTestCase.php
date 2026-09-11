@@ -15,7 +15,10 @@ use Psr\Log\AbstractLogger;
 use Temporal\Activity\ActivityOptions;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverter;
+use Temporal\Api\Common\V1\Payload;
+use Temporal\DataConverter\DataConverterInterface;
 use Temporal\DataConverter\EncodedValues;
+use Temporal\Exception\DataConverterException;
 use Temporal\Interceptor\Header;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
@@ -26,6 +29,7 @@ use Temporal\Tests\Unit\Framework\WorkerFactoryMock;
 use Temporal\Tests\Unit\Framework\WorkerMock;
 use Temporal\Worker\WorkerFactoryInterface;
 use Temporal\Worker\Environment\Environment;
+use Temporal\Worker\Transport\Command\Server\TickInfo;
 use Temporal\Worker\WorkerInterface;
 use Temporal\Worker\WorkerOptions;
 use Temporal\Workflow;
@@ -60,11 +64,22 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame([], $this->records);
     }
 
-    public function testWarningIsSkippedDuringReplay(): void
+    public function testReplayedCommandIsNotMeasuredAtAll(): void
     {
-        $this->runWorkflowWithArgument(\str_repeat('x', 2000), replaying: true);
+        // A raw logger, so only the warner's own replay guard can keep it silent
+        $environment = new Environment();
+        $environment->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
 
-        self::assertSame([], $this->records, 'Replayed commands must not warn again.');
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions(1024, 1024),
+            $this->throwingConverter(),
+            $environment,
+            $this->spyLogger(),
+        );
+
+        $warner->check($this->activityRequest(2000));
+
+        self::assertSame([], $this->records);
     }
 
     public function testReplayIsSkippedEvenWithLoggingInReplayEnabled(): void
@@ -81,16 +96,16 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
 
     public function testUnconvertibleValueIsNotReportedAndDoesNotThrow(): void
     {
-        // A closure cannot be converted to a payload; the check must stay silent and let the
-        // codec fail later, exactly as it did before the check existed.
-        $request = new ExecuteActivity(
-            'SimpleActivity.echo',
-            EncodedValues::fromValues([static fn(): int => 1]),
-            [],
-            Header::empty(),
+        // The converter fails on the value; the check must stay silent and let the codec fail
+        // later, exactly as it did before the check existed.
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions(1024, 1024),
+            $this->throwingConverter(),
+            new Environment(),
+            $this->spyLogger(),
         );
 
-        $this->warner()->check($request);
+        $warner->check($this->activityRequest(2000));
 
         self::assertSame([], $this->records);
     }
@@ -137,6 +152,31 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         $this->factory = WorkerFactoryMock::create();
 
         parent::setUp();
+    }
+
+    private function activityRequest(int $size): ExecuteActivity
+    {
+        return new ExecuteActivity(
+            'SimpleActivity.echo',
+            EncodedValues::fromValues([\str_repeat('x', $size)]),
+            [],
+            Header::empty(),
+        );
+    }
+
+    private function throwingConverter(): DataConverterInterface
+    {
+        return new class implements DataConverterInterface {
+            public function fromPayload(Payload $payload, $type): mixed
+            {
+                throw new DataConverterException('Not supported');
+            }
+
+            public function toPayload($value): Payload
+            {
+                throw new DataConverterException('Not supported');
+            }
+        };
     }
 
     private function warner(): PayloadSizeWarner
