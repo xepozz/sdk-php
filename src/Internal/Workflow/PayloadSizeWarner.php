@@ -12,15 +12,10 @@ declare(strict_types=1);
 namespace Temporal\Internal\Workflow;
 
 use Psr\Log\LoggerInterface;
-use Temporal\Api\Common\V1\Memo;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\DataConverter\ValuesInterface;
-use Temporal\Internal\Support\MessageSize;
-use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
-use Temporal\Internal\Transport\Request\UpsertMemo;
-use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
-use Temporal\Internal\Transport\Request\UpsertTypedSearchAttributes;
+use Temporal\Internal\Support\CommandPayloads;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
@@ -53,13 +48,6 @@ final class PayloadSizeWarner
      */
     public function check(RequestInterface $request): void
     {
-        $name = $request->getName();
-
-        // Local Activity arguments are not sent to the server
-        if ($name === ExecuteLocalActivity::NAME) {
-            return;
-        }
-
         // A replayed command is not sent anywhere, so it is never measured nor reported,
         // the same way the other SDKs check the payloads only when the request is sent.
         if ($this->env->isReplaying()) {
@@ -67,34 +55,18 @@ final class PayloadSizeWarner
         }
 
         try {
-            $options = $request->getOptions();
-
-            // Memo and Search Attribute upserts are maps measured key by key against the payload
-            // limit, the way the server measures them
-            $fields = match ($name) {
-                UpsertMemo::NAME => $options['memo'] ?? null,
-                UpsertSearchAttributes::NAME => $options['searchAttributes'] ?? null,
-                UpsertTypedSearchAttributes::NAME => self::valuesOf($options['search_attributes'] ?? null),
-                default => null,
-            };
-            $fields === null or $this->warn(
-                $name,
-                'payloads',
-                $this->mapSize($fields),
-                $this->limits->payloadSizeWarning,
+            $sizes = CommandPayloads::sizes(
+                $request,
+                $this->converter,
+                withPayloads: $this->limits->payloadSizeWarning !== null,
+                withMemo: $this->limits->memoSizeWarning !== null,
             );
 
-            // An upserted Memo is measured against the memo limit as well, as the server does
-            $this->memo($name, match ($name) {
-                // A Child Workflow carries a Memo of its own
-                default => $options['options']['Memo'] ?? null,
-                UpsertMemo::NAME => $options['memo'] ?? null,
-            });
-
-            $this->payloads($name, $request->getPayloads());
+            $this->warn($request->getName(), 'payloads', $sizes['payloads'], $this->limits->payloadSizeWarning);
+            $this->warn($request->getName(), 'memo', $sizes['memo'], $this->limits->memoSizeWarning);
         } catch (\Throwable) {
-            // Measuring is an observability feature: it must not affect the Workflow in any way.
-            // A value that cannot be converted fails later, in the codec, as it did before.
+            // Measuring and reporting is an observability feature: it must not affect the Workflow
+            // in any way. A value that cannot be converted fails later, in the codec, as before.
         }
     }
 
@@ -110,89 +82,15 @@ final class PayloadSizeWarner
         }
 
         try {
-            $this->payloads($command, $values);
+            $this->warn(
+                $command,
+                'payloads',
+                CommandPayloads::valuesSize($values, $this->converter),
+                $this->limits->payloadSizeWarning,
+            );
         } catch (\Throwable) {
             // See the comment in `check()`
         }
-    }
-
-    /**
-     * Values of a typed Search Attribute update, which carries the type and the operation
-     * next to the value itself. An `unset` update has no value to measure.
-     *
-     * @return array<array-key, mixed>
-     */
-    private static function valuesOf(mixed $fields): array
-    {
-        $result = [];
-        foreach (self::fieldsOf($fields) as $key => $update) {
-            \is_array($update) && \array_key_exists('value', $update) and $result[$key] = $update['value'];
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return array<array-key, mixed>
-     */
-    private static function fieldsOf(mixed $fields): array
-    {
-        return match (true) {
-            $fields instanceof \stdClass => (array) $fields,
-            \is_array($fields) => $fields,
-            default => [],
-        };
-    }
-
-    private function payloads(string $command, ValuesInterface $values): void
-    {
-        $limit = $this->limits->payloadSizeWarning;
-        if ($limit === null || $values->count() === 0) {
-            return;
-        }
-
-        $values->setDataConverter($this->converter);
-        $this->warn($command, 'payloads', MessageSize::ofPayloads($values->toPayloads()), $limit);
-    }
-
-    /**
-     * @param mixed $fields Raw values of a Memo, not converted yet.
-     */
-    private function memo(string $command, mixed $fields): void
-    {
-        $limit = $this->limits->memoSizeWarning;
-        $fields = self::fieldsOf($fields);
-        if ($limit === null || $fields === []) {
-            return;
-        }
-
-        $payloads = [];
-        foreach ($fields as $key => $value) {
-            $payloads[(string) $key] = $this->converter->toPayload($value);
-        }
-
-        $memo = (new Memo())->setFields($payloads);
-
-        $this->warn($command, 'memo', MessageSize::ofMemo($memo), $limit);
-    }
-
-    /**
-     * Size of a map of payloads: the server sums the key lengths with the sizes of the payload
-     * data, so the encoding overhead of the map itself is not counted.
-     *
-     * The values are converted with the Workflow's own converter, while the one RoadRunner uses
-     * produces the bytes that actually reach the server, so the size is an estimate.
-     *
-     * @param mixed $fields Raw values of the map, not converted yet.
-     */
-    private function mapSize(mixed $fields): int
-    {
-        $size = 0;
-        foreach (self::fieldsOf($fields) as $key => $value) {
-            $size += \strlen((string) $key) + \strlen($this->converter->toPayload($value)->getData());
-        }
-
-        return $size;
     }
 
     /**
