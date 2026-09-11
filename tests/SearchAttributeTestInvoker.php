@@ -15,7 +15,7 @@ final class SearchAttributeTestInvoker
     {
         $operation = new OperatorServiceClient(
             TemporalServer::address(),
-            ['credentials' => ChannelCredentials::createInsecure()]
+            ['credentials' => ChannelCredentials::createInsecure()],
         );
         $result = $operation->AddSearchAttributes(
             new AddSearchAttributesRequest(
@@ -23,9 +23,9 @@ final class SearchAttributeTestInvoker
                     'search_attributes' => [
                         'attr1' => 2, // Keyword
                         'attr2' => 5, // Bool
-                    ]
-                ]
-            )
+                    ],
+                ],
+            ),
         );
 
         $result->getMetadata();

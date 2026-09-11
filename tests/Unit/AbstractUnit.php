@@ -16,6 +16,4 @@ use Temporal\Tests\TestCase;
 /**
  * @group unit
  */
-abstract class AbstractUnit extends TestCase
-{
-}
+abstract class AbstractUnit extends TestCase {}

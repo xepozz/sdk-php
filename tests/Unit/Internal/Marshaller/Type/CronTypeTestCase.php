@@ -14,12 +14,6 @@ final class CronTypeTestCase extends TestCase
 {
     private CronType $type;
 
-    protected function setUp(): void
-    {
-        $marshaller = $this->createMock(MarshallerInterface::class);
-        $this->type = new CronType($marshaller);
-    }
-
     public function testParseEmptyStringReturnsNull(): void
     {
         $this->assertNull($this->type->parse('', null));
@@ -61,5 +55,11 @@ final class CronTypeTestCase extends TestCase
         $this->expectExceptionMessage('cron-like string');
 
         $this->type->serialize(42);
+    }
+
+    protected function setUp(): void
+    {
+        $marshaller = $this->createMock(MarshallerInterface::class);
+        $this->type = new CronType($marshaller);
     }
 }

@@ -35,7 +35,7 @@ final class AssocArrayTypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('unmarshal')->willReturnCallback(
-            fn(array $data, object $obj) => (object) $data,
+            static fn(array $data, object $obj) => (object) $data,
         );
         $type = new AssocArrayType($marshaller, \stdClass::class);
 
@@ -60,7 +60,7 @@ final class AssocArrayTypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('marshal')->willReturnCallback(
-            fn(object $obj) => (array) $obj,
+            static fn(object $obj) => (array) $obj,
         );
         $type = new AssocArrayType($marshaller, \stdClass::class);
 

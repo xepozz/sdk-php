@@ -91,7 +91,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowExecutionTimeout(
-            CarbonInterval::days(42)
+            CarbonInterval::days(42),
         ));
     }
 
@@ -100,7 +100,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowRunTimeout(
-            CarbonInterval::days(42)
+            CarbonInterval::days(42),
         ));
     }
 
@@ -109,7 +109,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowTaskTimeout(
-            CarbonInterval::seconds(10)
+            CarbonInterval::seconds(10),
         ));
     }
 
@@ -118,7 +118,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowStartDelay(
-            CarbonInterval::seconds(10)
+            CarbonInterval::seconds(10),
         ));
     }
 
@@ -127,7 +127,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowIdReusePolicy(
-            IdReusePolicy::POLICY_ALLOW_DUPLICATE
+            IdReusePolicy::POLICY_ALLOW_DUPLICATE,
         ));
     }
 
@@ -136,7 +136,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowIdReusePolicy(
-            IdReusePolicy::AllowDuplicateFailedOnly
+            IdReusePolicy::AllowDuplicateFailedOnly,
         ));
         $this->assertSame(IdReusePolicy::AllowDuplicateFailedOnly->value, $dto->workflowIdReusePolicy);
     }
@@ -146,7 +146,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $newDto = $dto->withWorkflowIdConflictPolicy(
-            WorkflowIdConflictPolicy::Fail
+            WorkflowIdConflictPolicy::Fail,
         ));
         $this->assertSame(WorkflowIdConflictPolicy::Unspecified, $dto->workflowIdConflictPolicy);
         $this->assertSame(WorkflowIdConflictPolicy::Fail, $newDto->workflowIdConflictPolicy);
@@ -157,7 +157,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withRetryOptions(
-            RetryOptions::new()
+            RetryOptions::new(),
         ));
     }
 
@@ -218,7 +218,7 @@ class WorkflowOptionsTestCase extends AbstractDTOMarshalling
     {
         $dto = new WorkflowOptions();
         $this->assertNull($dto->toSearchAttributes(
-            DataConverter::createDefault()
+            DataConverter::createDefault(),
         ));
     }
 

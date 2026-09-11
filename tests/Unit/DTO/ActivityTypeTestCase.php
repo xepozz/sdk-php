@@ -23,7 +23,7 @@ class ActivityTypeTestCase extends AbstractDTOMarshalling
         $dto = new ActivityType();
 
         $expected = [
-            'Name' => ''
+            'Name' => '',
         ];
 
         $this->assertSame($expected, $this->marshal($dto));

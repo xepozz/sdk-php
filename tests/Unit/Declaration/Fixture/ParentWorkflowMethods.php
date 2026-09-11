@@ -15,13 +15,15 @@ use Temporal\Tests\Unit\Declaration\Fixture\Interfaces\SimpleWorkflowInterface;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 abstract class ParentWorkflowMethods implements SimpleWorkflowInterface
 {
-    /** @WorkflowMethod */
+    /**
+     * @WorkflowMethod
+     */
     #[WorkflowMethod]
-    public function handler(): void
-    {
-    }
+    public function handler(): void {}
 }

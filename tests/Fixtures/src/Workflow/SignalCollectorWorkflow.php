@@ -22,6 +22,7 @@ class SignalCollectorWorkflow
 {
     /** @var list<array{value: string, at: int}> */
     private array $events = [];
+
     private bool $done = false;
 
     /**

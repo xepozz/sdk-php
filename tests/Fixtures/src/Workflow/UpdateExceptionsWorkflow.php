@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace Temporal\Tests\Workflow;
 
 use Carbon\CarbonInterval;
-use InvalidArgumentException;
 use Temporal\Activity\ActivityOptions;
 use Temporal\Common\RetryOptions;
 use Temporal\Workflow;
@@ -36,7 +35,7 @@ class UpdateExceptionsWorkflow
                 return $received;
             }
 
-            $message = array_shift($this->greetings);
+            $message = \array_shift($this->greetings);
             $received[] = $message;
         }
     }
@@ -52,7 +51,7 @@ class UpdateExceptionsWorkflow
     public function failInvalidArgument($name = 'foo'): void
     {
         $this->greetings[] = "invalidArgument $name";
-        throw new InvalidArgumentException("Invalid argument $name");
+        throw new \InvalidArgumentException("Invalid argument $name");
     }
 
     #[Workflow\UpdateMethod]
@@ -62,7 +61,7 @@ class UpdateExceptionsWorkflow
             ActivityOptions::new()
                 ->withScheduleToStartTimeout(1)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(1)
+                    RetryOptions::new()->withMaximumAttempts(1),
                 )
                 ->withStartToCloseTimeout(1),
         )->execute('nonExistingActivityName', [$name]);

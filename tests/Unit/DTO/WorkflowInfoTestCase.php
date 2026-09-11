@@ -28,7 +28,7 @@ class WorkflowInfoTestCase extends AbstractDTOMarshalling
                 'RunID' => null,
             ],
             'WorkflowType' => [
-                'Name' => ''
+                'Name' => '',
             ],
             'TaskQueueName' => 'default',
             'WorkflowExecutionTimeout' => 290304000000000000,

@@ -16,7 +16,6 @@ use PHPUnit\Framework\Attributes\TestDox;
 use Temporal\Exception\InstantiationException;
 use Temporal\Internal\Declaration\Instantiator\WorkflowInstantiator;
 use Temporal\Internal\Declaration\Reader\WorkflowReader;
-use Temporal\Tests\Fixtures\PipelineProvider;
 use Temporal\Tests\Unit\Declaration\Fixture\UnannotatedClass;
 use Temporal\Tests\Unit\Declaration\Fixture\WorkflowWithMultipleMethods;
 use Temporal\Tests\Unit\Declaration\Fixture\WorkflowWithoutHandler;
@@ -29,7 +28,6 @@ use Temporal\Workflow\WorkflowInterface;
 class WorkflowNegativeDeclarationTestCase extends AbstractDeclaration
 {
     /**
-     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Validate errors while loading workflow without WorkflowInterface attribute")]
@@ -42,14 +40,13 @@ class WorkflowNegativeDeclarationTestCase extends AbstractDeclaration
             [
                 UnannotatedClass::class,
                 WorkflowInterface::class,
-            ]
+            ],
         ));
 
         $reader->fromClass(UnannotatedClass::class);
     }
 
     /**
-     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Workflow handlers duplication")]
@@ -62,7 +59,6 @@ class WorkflowNegativeDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
-     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Workflow without handler instantiation")]

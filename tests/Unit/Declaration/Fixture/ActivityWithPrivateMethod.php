@@ -14,13 +14,15 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/** @ActivityInterface */
+/**
+ * @ActivityInterface
+ */
 #[ActivityInterface]
 class ActivityWithPrivateMethod
 {
-    /** @ActivityMethod */
+    /**
+     * @ActivityMethod
+     */
     #[ActivityMethod]
-    private function invalidActivityPrivateMethod(): void
-    {
-    }
+    private function invalidActivityPrivateMethod(): void {}
 }

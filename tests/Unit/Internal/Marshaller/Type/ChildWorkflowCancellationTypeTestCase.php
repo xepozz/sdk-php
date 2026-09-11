@@ -15,12 +15,6 @@ final class ChildWorkflowCancellationTypeTestCase extends TestCase
 {
     private ChildWorkflowCancellationType $type;
 
-    protected function setUp(): void
-    {
-        $marshaller = $this->createMock(MarshallerInterface::class);
-        $this->type = new ChildWorkflowCancellationType($marshaller);
-    }
-
     public function testParseTrue(): void
     {
         $this->assertSame(Policy::WAIT_CANCELLATION_COMPLETED, $this->type->parse(true, null));
@@ -47,5 +41,11 @@ final class ChildWorkflowCancellationTypeTestCase extends TestCase
         $this->expectExceptionMessage('is currently not supported');
 
         $this->type->serialize(Policy::ABANDON);
+    }
+
+    protected function setUp(): void
+    {
+        $marshaller = $this->createMock(MarshallerInterface::class);
+        $this->type = new ChildWorkflowCancellationType($marshaller);
     }
 }

@@ -16,7 +16,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testSimple(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 yield 1;
                 yield 42 => 2;
                 yield 3;
@@ -35,7 +35,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareSendingValues(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 $a = yield;
                 $b = yield $a;
                 $c = yield $b;
@@ -53,7 +53,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareThrowingExceptions(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 try {
                     yield;
                     throw new \Exception('foo');
@@ -74,7 +74,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareReturn(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 yield 1;
                 return 2;
             })(),
@@ -88,7 +88,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareEmpty(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 yield from [];
             })(),
             [
@@ -102,7 +102,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareEmptyReturn(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 return;
                 yield;
             })(),
@@ -117,7 +117,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareEmptyThrow(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 throw new \Exception('foo');
                 yield;
             })(),
@@ -128,7 +128,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareEmptyThrowValid(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 throw new \Exception('foo');
                 yield;
             })(),
@@ -139,7 +139,7 @@ final class DeferredGeneratorTestCase extends TestCase
     public function testCompareEmptyThrowGetKey(): void
     {
         $this->compare(
-            fn() => (function () {
+            static fn() => (static function () {
                 throw new \Exception('foo');
                 yield;
             })(),
@@ -149,7 +149,7 @@ final class DeferredGeneratorTestCase extends TestCase
 
     public function testLazyNotGeneratorValidGetReturn(): void
     {
-        $lazy = DeferredGenerator::fromHandler(fn() => 42, EncodedValues::empty());
+        $lazy = DeferredGenerator::fromHandler(static fn() => 42, EncodedValues::empty());
 
         $this->assertFalse($lazy->valid());
         $this->assertSame(42, $lazy->getReturn());
@@ -157,14 +157,14 @@ final class DeferredGeneratorTestCase extends TestCase
 
     public function testLazyNotGeneratorCurrent(): void
     {
-        $lazy = DeferredGenerator::fromHandler(fn() => 42, EncodedValues::empty());
+        $lazy = DeferredGenerator::fromHandler(static fn() => 42, EncodedValues::empty());
 
         $this->assertNull($lazy->current());
     }
 
     public function testLazyNotGeneratorWithException(): void
     {
-        $lazy = DeferredGenerator::fromHandler(fn() => throw new \Exception('foo'), EncodedValues::empty());
+        $lazy = DeferredGenerator::fromHandler(static fn() => throw new \Exception('foo'), EncodedValues::empty());
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('foo');
@@ -174,7 +174,7 @@ final class DeferredGeneratorTestCase extends TestCase
 
     public function testLazyNotGeneratorWithException2(): void
     {
-        $lazy = DeferredGenerator::fromHandler(fn() => throw new \Exception('foo'), EncodedValues::empty());
+        $lazy = DeferredGenerator::fromHandler(static fn() => throw new \Exception('foo'), EncodedValues::empty());
 
         try {
             $lazy->current();
@@ -204,7 +204,7 @@ final class DeferredGeneratorTestCase extends TestCase
 
     public function testGetResultFromNotStartedGenerator(): void
     {
-        $closure = fn() => (function () {
+        $closure = static fn() => (static function () {
             yield 1;
         });
 
@@ -217,7 +217,6 @@ final class DeferredGeneratorTestCase extends TestCase
     /**
      * @param callable(): \Generator $generatorFactory
      * @param iterable<Action|int, array{Action, mixed}> $actions
-     * @return void
      */
     private function compare(
         callable $generatorFactory,
@@ -227,11 +226,11 @@ final class DeferredGeneratorTestCase extends TestCase
         $caught = false;
         $gen = $generatorFactory();
         $def = DeferredGenerator::fromGenerator($generatorFactory());
-        $def->catch(function (\Throwable $e) use (&$c1) {
+        $def->catch(static function (\Throwable $e) use (&$c1): void {
             $c1 = $e;
         });
         $lazy = DeferredGenerator::fromHandler($generatorFactory, EncodedValues::empty());
-        $lazy->catch(function (\Throwable $e) use (&$c2) {
+        $lazy->catch(static function (\Throwable $e) use (&$c2): void {
             $c2 = $e;
         });
 

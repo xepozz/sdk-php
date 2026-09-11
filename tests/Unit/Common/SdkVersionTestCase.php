@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Temporal\Tests\Unit\Common;
 
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -8,17 +10,6 @@ use Temporal\Common\SdkVersion;
 
 class SdkVersionTestCase extends TestCase
 {
-    #[DataProvider('versionProvider')]
-    public function testVersionRegx(string $version, string $matched): void
-    {
-        $result = preg_match(SdkVersion::VERSION_REGX, $version, $matches);
-        if ($matched === '') {
-            $this->assertNotSame(1, $result);
-        } else {
-            $this->assertEquals($matched, $matches[1]);
-        }
-    }
-
     public static function versionProvider(): iterable
     {
         return [
@@ -33,5 +24,16 @@ class SdkVersionTestCase extends TestCase
             ['1.foo', ''],
             ['feature/interceptors', ''],
         ];
+    }
+
+    #[DataProvider('versionProvider')]
+    public function testVersionRegx(string $version, string $matched): void
+    {
+        $result = \preg_match(SdkVersion::VERSION_REGX, $version, $matches);
+        if ($matched === '') {
+            $this->assertNotSame(1, $result);
+        } else {
+            $this->assertEquals($matched, $matches[1]);
+        }
     }
 }

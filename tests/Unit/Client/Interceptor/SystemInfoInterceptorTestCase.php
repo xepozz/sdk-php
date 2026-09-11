@@ -17,12 +17,6 @@ final class SystemInfoInterceptorTestCase extends TestCase
     private ServiceClient $serviceClient;
     private SystemInfoInterceptor $interceptor;
 
-    protected function setUp(): void
-    {
-        $this->serviceClient = $this->createMock(ServiceClient::class);
-        $this->interceptor = new SystemInfoInterceptor($this->serviceClient);
-    }
-
     public function testWithoutCapabilities(): void
     {
         $this->serviceClient
@@ -34,7 +28,7 @@ final class SystemInfoInterceptorTestCase extends TestCase
             'foo',
             new \stdClass(),
             $this->createMock(ContextInterface::class),
-            fn () => new \stdClass()
+            static fn() => new \stdClass(),
         );
     }
 
@@ -49,7 +43,7 @@ final class SystemInfoInterceptorTestCase extends TestCase
             'foo',
             new \stdClass(),
             $this->createMock(ContextInterface::class),
-            fn () => new \stdClass()
+            static fn() => new \stdClass(),
         );
     }
 
@@ -67,7 +61,7 @@ final class SystemInfoInterceptorTestCase extends TestCase
             'foo',
             new \stdClass(),
             $this->createMock(ContextInterface::class),
-            fn () => new \stdClass()
+            static fn() => new \stdClass(),
         );
     }
 
@@ -76,9 +70,15 @@ final class SystemInfoInterceptorTestCase extends TestCase
         self::assertTrue(\class_exists(\Temporal\Client\ServerCapabilities::class));
     }
 
+    protected function setUp(): void
+    {
+        $this->serviceClient = $this->createMock(ServiceClient::class);
+        $this->interceptor = new SystemInfoInterceptor($this->serviceClient);
+    }
+
     private function createException(int $code): ServiceClientException
     {
-        return new class ($code) extends ServiceClientException {
+        return new class($code) extends ServiceClientException {
             public function __construct(int $code)
             {
                 $status = new \stdClass();

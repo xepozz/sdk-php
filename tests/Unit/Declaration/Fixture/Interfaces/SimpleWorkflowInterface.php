@@ -14,11 +14,15 @@ namespace Temporal\Tests\Unit\Declaration\Fixture\Interfaces;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 interface SimpleWorkflowInterface
 {
-    /** @WorkflowMethod */
+    /**
+     * @WorkflowMethod
+     */
     #[WorkflowMethod]
     public function handler(): void;
 }

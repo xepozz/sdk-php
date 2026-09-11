@@ -60,6 +60,30 @@ final class DateIntervalTestCase extends TestCase
         yield 'lowercase' => ['p2d', false];
     }
 
+    public static function provideCarbonDateIntervalDifferences(): \Generator
+    {
+        // Cases where Carbon and DateInterval parse the same string differently
+        // Format: [interval string, expected warning]
+
+        // P2M: Carbon parses as 2 minutes, DateInterval as 2 months
+        yield 'P2M - ambiguous months/minutes' => ['P2M', true];
+
+        // Cases that should NOT trigger warning (identical parsing)
+        yield 'PT2M - explicit minutes with T' => ['PT2M', false];
+        yield 'P1Y - explicit years' => ['P1Y', false];
+        yield 'P2D - explicit days' => ['P2D', false];
+        yield 'PT5S - explicit seconds' => ['PT5S', false];
+    }
+
+    public static function provideNonIso8601FormatsNoWarning(): \Generator
+    {
+        // Natural language formats that Carbon accepts but aren't ISO 8601
+        // These should NOT trigger warnings because they don't match ISO 8601 format
+        yield 'natural language - 2 days' => ['2 days'];
+        yield 'natural language - 1 hour' => ['1 hour'];
+        yield 'natural language - 30 minutes' => ['30 minutes'];
+    }
+
     #[DataProvider('provideValuesToParse')]
     public function testParse(mixed $value, string $format, int $microseconds, string $formatted): void
     {
@@ -218,21 +242,6 @@ final class DateIntervalTestCase extends TestCase
         );
     }
 
-    public static function provideCarbonDateIntervalDifferences(): \Generator
-    {
-        // Cases where Carbon and DateInterval parse the same string differently
-        // Format: [interval string, expected warning]
-
-        // P2M: Carbon parses as 2 minutes, DateInterval as 2 months
-        yield 'P2M - ambiguous months/minutes' => ['P2M', true];
-
-        // Cases that should NOT trigger warning (identical parsing)
-        yield 'PT2M - explicit minutes with T' => ['PT2M', false];
-        yield 'P1Y - explicit years' => ['P1Y', false];
-        yield 'P2D - explicit days' => ['P2D', false];
-        yield 'PT5S - explicit seconds' => ['PT5S', false];
-    }
-
     #[DataProvider('provideCarbonDateIntervalDifferences')]
     public function testParseTriggersWarningWhenCarbonAndDateIntervalDiffer(
         string $interval,
@@ -291,15 +300,6 @@ final class DateIntervalTestCase extends TestCase
                 ),
             );
         }
-    }
-
-    public static function provideNonIso8601FormatsNoWarning(): \Generator
-    {
-        // Natural language formats that Carbon accepts but aren't ISO 8601
-        // These should NOT trigger warnings because they don't match ISO 8601 format
-        yield 'natural language - 2 days' => ['2 days'];
-        yield 'natural language - 1 hour' => ['1 hour'];
-        yield 'natural language - 30 minutes' => ['30 minutes'];
     }
 
     #[DataProvider('provideNonIso8601FormatsNoWarning')]

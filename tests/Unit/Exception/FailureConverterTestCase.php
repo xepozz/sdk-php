@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Temporal\Tests\Unit\Exception;
 
 use Carbon\CarbonInterval;
-use Exception;
 use Google\Protobuf\Duration;
 use Temporal\Api\Failure\V1\Failure;
 use Temporal\DataConverter\DataConverter;
@@ -39,7 +38,7 @@ final class FailureConverterTestCase extends AbstractUnit
     public function testStackTraceStringForAdditionalContext(): void
     {
         $trace = FailureConverter::mapExceptionToFailure(
-            new Exception(),
+            new \Exception(),
             DataConverter::createDefault(),
         )->getStackTrace();
 
@@ -61,7 +60,7 @@ final class FailureConverterTestCase extends AbstractUnit
 
         try {
             $trace = FailureConverter::mapExceptionToFailure(
-                call_user_func(fn() => new Exception()),
+                \call_user_func(static fn() => new \Exception()),
                 DataConverter::createDefault(),
             )->getStackTrace();
         } finally {
@@ -103,7 +102,7 @@ final class FailureConverterTestCase extends AbstractUnit
 
         try {
             $trace = FailureConverter::mapExceptionToFailure(
-                call_user_func(static fn() => new Exception()),
+                \call_user_func(static fn() => new \Exception()),
                 DataConverter::createDefault(),
             )->getStackTrace();
         } finally {

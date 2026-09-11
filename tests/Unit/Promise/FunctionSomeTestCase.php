@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Promise;
 
-use Exception;
 use React\Promise\Deferred;
 use React\Promise\Exception\LengthException;
 use Temporal\Internal\Promise\Reasons;
@@ -27,8 +26,8 @@ final class FunctionSomeTestCase extends BaseFunction
             ->with(
                 $this->callback(static function ($exception): bool {
                     return $exception instanceof LengthException &&
-                        'Input array must contain at least 1 item but contains only 0 items.' === $exception->getMessage();
-                })
+                        $exception->getMessage() === 'Input array must contain at least 1 item but contains only 0 items.';
+                }),
             );
 
         Promise::some([], 1)
@@ -42,15 +41,15 @@ final class FunctionSomeTestCase extends BaseFunction
             ->expects($this->once())
             ->method('__invoke')
             ->with(
-                $this->callback(function ($exception) {
+                $this->callback(static function ($exception) {
                     return $exception instanceof LengthException &&
-                        'Input array must contain at least 4 items but contains only 3 items.' === $exception->getMessage();
-                })
+                        $exception->getMessage() === 'Input array must contain at least 4 items but contains only 3 items.';
+                }),
             );
 
         Promise::some(
             [1, 2, 3],
-            4
+            4,
         )->then($this->expectCallableNever(), $mock);
     }
 
@@ -64,7 +63,7 @@ final class FunctionSomeTestCase extends BaseFunction
 
         Promise::some(
             [1, 2, 3],
-            2
+            2,
         )->then($mock);
     }
 
@@ -78,7 +77,7 @@ final class FunctionSomeTestCase extends BaseFunction
 
         Promise::some(
             [Promise::resolve(1), Promise::resolve(2), Promise::resolve(3)],
-            2
+            2,
         )->then($mock);
     }
 
@@ -92,25 +91,25 @@ final class FunctionSomeTestCase extends BaseFunction
 
         Promise::some(
             [null, 1, null, 2, 3],
-            2
+            2,
         )->then($mock);
     }
 
     public function testRejectIfAnyInputPromiseRejectsBeforeDesiredNumberOfInputsAreResolved(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->once())
             ->method('__invoke')
-            ->with($this->callback(function (mixed $exception) use ($e) {
+            ->with($this->callback(static function (mixed $exception) use ($e) {
                 return $exception instanceof Reasons &&
                     \in_array($e, \iterator_to_array($exception));
             }));
 
         Promise::some(
             [Promise::resolve(1), Promise::reject($e), Promise::reject($e)],
-            2
+            2,
         )->then($this->expectCallableNever(), $mock);
     }
 
@@ -124,7 +123,7 @@ final class FunctionSomeTestCase extends BaseFunction
 
         Promise::some(
             [1],
-            0
+            0,
         )->then($mock);
     }
 
@@ -166,7 +165,7 @@ final class FunctionSomeTestCase extends BaseFunction
 
     public function testNotCancelOtherPendingInputArrayPromisesIfEnoughPromisesReject(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->never())

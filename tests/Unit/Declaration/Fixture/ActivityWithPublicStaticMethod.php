@@ -14,13 +14,15 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/** @ActivityInterface */
+/**
+ * @ActivityInterface
+ */
 #[ActivityInterface]
 class ActivityWithPublicStaticMethod
 {
-    /** @ActivityMethod */
+    /**
+     * @ActivityMethod
+     */
     #[ActivityMethod]
-    public static function invalidActivityPublicStaticMethod(): void
-    {
-    }
+    public static function invalidActivityPublicStaticMethod(): void {}
 }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Temporal\Tests\Acceptance\Harness\Update\ValidationReplay;
+
 use PHPUnit\Framework\Attributes\Test;
 use Temporal\Client\WorkflowStubInterface;
 use Temporal\Tests\Acceptance\App\Attribute\Stub;

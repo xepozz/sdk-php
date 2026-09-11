@@ -14,15 +14,16 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 use Temporal\Tests\Unit\Declaration\Fixture\Interfaces\SimpleActivityInterface;
-use Temporal\Tests\Unit\Declaration\Fixture\Interfaces\SimpleWorkflowInterface;
 
-/** @ActivityInterface(prefix="prefix.") */
+/**
+ * @ActivityInterface(prefix="prefix.")
+ */
 #[ActivityInterface(prefix: "prefix.")]
 abstract class ParentActivityMethods implements SimpleActivityInterface
 {
-    /** @ActivityMethod(name="alternativeActivityName") */
+    /**
+     * @ActivityMethod(name="alternativeActivityName")
+     */
     #[ActivityMethod(name: 'alternativeActivityName')]
-    public function activityMethod(): void
-    {
-    }
+    public function activityMethod(): void {}
 }

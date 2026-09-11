@@ -23,11 +23,6 @@ use Temporal\Tests\Unit\AbstractUnit;
  */
 class JsonConverterTestCase extends AbstractUnit
 {
-    protected function create(): PayloadConverterInterface
-    {
-        return new JsonConverter();
-    }
-
     public function testUuidToPayload(): void
     {
         $converter = $this->create();
@@ -38,7 +33,7 @@ class JsonConverterTestCase extends AbstractUnit
 
         $this->assertNotNull($payload);
         $this->assertSame(
-            \json_encode((string)$dto),
+            \json_encode((string) $dto),
             $payload->getData(),
         );
     }
@@ -53,5 +48,10 @@ class JsonConverterTestCase extends AbstractUnit
         $value = $converter->fromPayload($payload, new Type(Type::TYPE_STRING, allowsNull: true));
 
         $this->assertNull($value);
+    }
+
+    protected function create(): PayloadConverterInterface
+    {
+        return new JsonConverter();
     }
 }

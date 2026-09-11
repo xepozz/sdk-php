@@ -14,7 +14,9 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Workflow\SignalMethod;
 use Temporal\Workflow\WorkflowInterface;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 class WorkflowWithoutHandler
 {
@@ -24,7 +26,5 @@ class WorkflowWithoutHandler
     }
 
     #[SignalMethod]
-    public function signal()
-    {
-    }
+    public function signal(): void {}
 }

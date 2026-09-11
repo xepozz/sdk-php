@@ -23,11 +23,11 @@ class TimerWayWorkflow
         $timerResolved = false;
 
         $timer = Workflow::timer(20)
-            ->then(function () use (&$timerResolved) {
+            ->then(static function () use (&$timerResolved): void {
                 $timerResolved = true;
             });
 
-        yield Workflow::await($timer, fn() => true);
+        yield Workflow::await($timer, static fn() => true);
 
         return $timerResolved;
     }

@@ -10,6 +10,17 @@ use Temporal\Common\Priority;
 
 final class PriorityTestCase extends TestCase
 {
+    public static function invalidFairnessWeightProvider(): iterable
+    {
+        return [
+            'zero' => [0.0],
+            'below minimum' => [0.0009],
+            'negative' => [-1.0],
+            'above maximum' => [1000.1],
+            'large value' => [9999.0],
+        ];
+    }
+
     public function testWithFairnessWeightValidValue(): void
     {
         $priority = Priority::new()->withFairnessWeight(1.0);
@@ -38,17 +49,6 @@ final class PriorityTestCase extends TestCase
         $this->expectExceptionMessage('FairnessWeight must be in the range [0.001, 1000].');
 
         Priority::new()->withFairnessWeight($value);
-    }
-
-    public static function invalidFairnessWeightProvider(): iterable
-    {
-        return [
-            'zero' => [0.0],
-            'below minimum' => [0.0009],
-            'negative' => [-1.0],
-            'above maximum' => [1000.1],
-            'large value' => [9999.0],
-        ];
     }
 
     public function testWithFairnessWeightIsImmutable(): void

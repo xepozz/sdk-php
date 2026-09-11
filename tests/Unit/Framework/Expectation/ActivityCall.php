@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Framework\Expectation;
 
-use DateTimeImmutable;
 use PHPUnit\Framework\ExpectationFailedException;
-use ReflectionClass;
 use Temporal\DataConverter\EncodedValues;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
 use Temporal\Worker\Transport\Command\CommandInterface;
@@ -23,7 +21,7 @@ final class ActivityCall implements ExpectationInterface
 
     public function __construct(string $activityClass, string $activityMethod, array $expectedValues)
     {
-        $this->name = (new ReflectionClass($activityClass))->getShortName() . '.' . $activityMethod;
+        $this->name = (new \ReflectionClass($activityClass))->getShortName() . '.' . $activityMethod;
         $this->values = $expectedValues;
     }
 
@@ -34,13 +32,13 @@ final class ActivityCall implements ExpectationInterface
 
     public function run(CommandInterface $command): CommandInterface
     {
-        return new SuccessResponse(EncodedValues::fromValues($this->values), $command->getID(), new TickInfo(new DateTimeImmutable()));
+        return new SuccessResponse(EncodedValues::fromValues($this->values), $command->getID(), new TickInfo(new \DateTimeImmutable()));
     }
 
     public function fail(): void
     {
         throw new ExpectationFailedException(
-            "Expected call of $this->name with " . implode(", ", $this->values) . "."
+            "Expected call of $this->name with " . \implode(", ", $this->values) . ".",
         );
     }
 }

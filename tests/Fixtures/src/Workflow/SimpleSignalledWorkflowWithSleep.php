@@ -21,8 +21,8 @@ class SimpleSignalledWorkflowWithSleep
 
     #[Workflow\SignalMethod(name: "add")]
     public function add(
-        int $value
-    ) {
+        int $value,
+    ): void {
         $this->counter += $value;
     }
 
@@ -33,7 +33,7 @@ class SimpleSignalledWorkflowWithSleep
         yield Workflow::timer(1);
 
         if (!Workflow::isReplaying()) {
-            sleep(1);
+            \sleep(1);
         }
 
         return $this->counter;

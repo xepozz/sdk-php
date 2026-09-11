@@ -15,12 +15,6 @@ final class ActivityMockerTestCase extends TestCase
 {
     private DataConverter $converter;
 
-    protected function setUp(): void
-    {
-        $this->converter = DataConverter::createDefault();
-        parent::setUp();
-    }
-
     public function testConsecutiveCompletionsAdvanceAndRepeatLast(): void
     {
         $cache = new InMemoryActivityInvocationCache($this->converter);
@@ -68,6 +62,12 @@ final class ActivityMockerTestCase extends TestCase
         $local->method('getOptions')->willReturn(['name' => 'JustLocalActivity.echo']);
 
         self::assertTrue($cache->canHandle($local));
+    }
+
+    protected function setUp(): void
+    {
+        $this->converter = DataConverter::createDefault();
+        parent::setUp();
     }
 
     /**

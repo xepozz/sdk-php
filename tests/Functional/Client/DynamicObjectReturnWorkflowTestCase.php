@@ -21,4 +21,3 @@ final class DynamicObjectReturnWorkflowTestCase extends AbstractClient
         self::assertSame('OK', $run->getResult('string'));
     }
 }
-

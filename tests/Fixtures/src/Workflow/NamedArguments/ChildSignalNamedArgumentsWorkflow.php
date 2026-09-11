@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Temporal\Tests\Workflow\NamedArguments;
 
 use Temporal\Workflow;

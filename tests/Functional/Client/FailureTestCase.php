@@ -29,7 +29,7 @@ use Temporal\Tests\Workflow\UpdateExceptionsWorkflow;
  */
 class FailureTestCase extends AbstractClient
 {
-    public function testSimpleFailurePropagation()
+    public function testSimpleFailurePropagation(): void
     {
         $client = $this->createClient();
         $ex = $client->newUntypedWorkflowStub('ExceptionalWorkflow');
@@ -47,7 +47,7 @@ class FailureTestCase extends AbstractClient
         }
     }
 
-    public function testActivityFailurePropagation()
+    public function testActivityFailurePropagation(): void
     {
         $client = $this->createClient();
         $ex = $client->newUntypedWorkflowStub('ExceptionalActivityWorkflow');
@@ -60,7 +60,7 @@ class FailureTestCase extends AbstractClient
         $ex->getResult();
     }
 
-    public function testChildWorkflowFailurePropagation()
+    public function testChildWorkflowFailurePropagation(): void
     {
         $client = $this->createClient();
         $ex = $client->newUntypedWorkflowStub('ComplexExceptionalWorkflow');
@@ -88,7 +88,7 @@ class FailureTestCase extends AbstractClient
         }
     }
 
-    public function testSignalThatThrowsRetryableException()
+    public function testSignalThatThrowsRetryableException(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(SignalExceptionsWorkflow::class);
@@ -97,14 +97,14 @@ class FailureTestCase extends AbstractClient
 
         $wf->failRetryable();
 
-        sleep(1);
+        \sleep(1);
         $wf->exit();
 
         // There is no any exception because the workflow has not failed after the `failRetryable` signal.
         $this->assertTrue(true);
     }
 
-    public function testSignalThatThrowsCustomError()
+    public function testSignalThatThrowsCustomError(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(SignalExceptionsWorkflow::class);
@@ -115,7 +115,7 @@ class FailureTestCase extends AbstractClient
 
         try {
             // The next
-            sleep(2);
+            \sleep(2);
             $wf->exit();
             $this->fail('Signal must fail');
         } catch (AssertionFailedError $e) {
@@ -127,10 +127,10 @@ class FailureTestCase extends AbstractClient
 
         $this->expectException(WorkflowFailedException::class);
         $result = $run->getResult();
-        $this->fail(sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
+        $this->fail(\sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
     }
 
-    public function testSignalThatThrowsInvalidArgumentException()
+    public function testSignalThatThrowsInvalidArgumentException(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(SignalExceptionsWorkflow::class);
@@ -141,10 +141,10 @@ class FailureTestCase extends AbstractClient
 
         $this->expectException(WorkflowFailedException::class);
         $result = $run->getResult();
-        $this->fail(sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
+        $this->fail(\sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
     }
 
-    public function testSignalThatThrowsInternalException()
+    public function testSignalThatThrowsInternalException(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(SignalExceptionsWorkflow::class);
@@ -152,7 +152,7 @@ class FailureTestCase extends AbstractClient
         $run = $client->startWithSignal($wf, 'failActivity', ['foo']);
 
         try {
-            sleep(3);
+            \sleep(3);
             $wf->failActivity('foo');
             $this->fail('Signal must fail');
         } catch (AssertionFailedError $e) {
@@ -163,25 +163,25 @@ class FailureTestCase extends AbstractClient
 
         $this->expectException(WorkflowFailedException::class);
         $result = $run->getResult();
-        $this->fail(sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
+        $this->fail(\sprintf("Workflow must fail. Got result %s", \print_r($result, true)));
     }
 
     /**
      * @group skip-on-test-server
      */
-    public function testUpdateThatThrowsRetryableException()
+    public function testUpdateThatThrowsRetryableException(): void
     {
         $client = $this->createClient();
         $wf = $client->newUntypedWorkflowStub(
             'SignalExceptions.greet',
-            WorkflowOptions::new()->withWorkflowRunTimeout('40 seconds')
+            WorkflowOptions::new()->withWorkflowRunTimeout('40 seconds'),
         );
 
         $run = $client->start($wf);
 
         $wf->startUpdate('error');
 
-        sleep(1);
+        \sleep(1);
         $wf->signal('exit');
 
         // Check history
@@ -210,7 +210,7 @@ class FailureTestCase extends AbstractClient
     /**
      * @group skip-on-test-server
      */
-    public function testUpdateThatThrowsCustomError()
+    public function testUpdateThatThrowsCustomError(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(UpdateExceptionsWorkflow::class);
@@ -228,7 +228,7 @@ class FailureTestCase extends AbstractClient
     /**
      * @group skip-on-test-server
      */
-    public function testUpdateThatThrowsInvalidArgumentException()
+    public function testUpdateThatThrowsInvalidArgumentException(): void
     {
         try {
             $client = $this->createClient();
@@ -245,7 +245,7 @@ class FailureTestCase extends AbstractClient
     /**
      * @group skip-on-test-server
      */
-    public function testUpdateThatThrowsInternalException()
+    public function testUpdateThatThrowsInternalException(): void
     {
         $client = $this->createClient();
         $wf = $client->newWorkflowStub(UpdateExceptionsWorkflow::class);

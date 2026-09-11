@@ -15,12 +15,6 @@ final class ActivityCancellationTypeTestCase extends TestCase
 {
     private ActivityCancellationType $type;
 
-    protected function setUp(): void
-    {
-        $marshaller = $this->createMock(MarshallerInterface::class);
-        $this->type = new ActivityCancellationType($marshaller);
-    }
-
     public function testParseTrue(): void
     {
         $this->assertSame(Policy::WAIT_CANCELLATION_COMPLETED, $this->type->parse(true, null));
@@ -47,5 +41,11 @@ final class ActivityCancellationTypeTestCase extends TestCase
         $this->expectExceptionMessage('is currently not supported');
 
         $this->type->serialize(Policy::ABANDON);
+    }
+
+    protected function setUp(): void
+    {
+        $marshaller = $this->createMock(MarshallerInterface::class);
+        $this->type = new ActivityCancellationType($marshaller);
     }
 }

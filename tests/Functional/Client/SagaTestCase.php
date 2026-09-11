@@ -21,7 +21,7 @@ use Temporal\Tests\Workflow\SagaWorkflow;
  */
 class SagaTestCase extends AbstractClient
 {
-    public function testGetResult()
+    public function testGetResult(): void
     {
         $client = $this->createClient();
         $saga = $client->newWorkflowStub(SagaWorkflow::class);

@@ -40,7 +40,7 @@ final class TypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('unmarshal')->willReturnCallback(
-            fn(array $data, object $obj) => (object) $data,
+            static fn(array $data, object $obj) => (object) $data,
         );
 
         // stdClass is not a TypeInterface, so ofType wraps it in ObjectType
@@ -76,7 +76,7 @@ final class TypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('unmarshal')->willReturnCallback(
-            fn(array $data, object $obj) => (object) $data,
+            static fn(array $data, object $obj) => (object) $data,
         );
 
         // MarshallingRule with of= argument passes it as constructor arg to the type

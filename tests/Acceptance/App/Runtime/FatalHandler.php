@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Temporal\Tests\Acceptance\App\Runtime;
 
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Temporal\Testing\Transcript\TranscriptWriter;
 
 final class FatalHandler
@@ -19,7 +18,6 @@ final class FatalHandler
     ];
 
     private static bool $inHandler = false;
-
     private static bool $registered = false;
 
     public static function register(TranscriptWriter $writer, LoggerInterface $stderr): void

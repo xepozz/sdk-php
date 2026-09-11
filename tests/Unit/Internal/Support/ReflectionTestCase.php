@@ -13,7 +13,6 @@ use Temporal\Internal\Support\Reflection;
 #[CoversClass(\Temporal\Internal\Support\Reflection::class)]
 final class ReflectionTestCase extends TestCase
 {
-
     public static function provideOrderArguments(): iterable
     {
         // Normal named order
@@ -65,7 +64,6 @@ final class ReflectionTestCase extends TestCase
         ];
     }
 
-
     /**
      * @param array<int|string, int|null> $arguments
      * @param list<int|null> $expectedResult
@@ -80,7 +78,7 @@ final class ReflectionTestCase extends TestCase
          *
          * @return array<?int>
          */
-        $fn = static fn (int $foo, ?int $bar, int $baz = 42): array => \func_get_args();
+        $fn = static fn(int $foo, ?int $bar, int $baz = 42): array => \func_get_args();
         $reflection = new \ReflectionFunction($fn);
 
         $sortedArguments = Reflection::orderArguments($reflection, $arguments);
@@ -88,34 +86,34 @@ final class ReflectionTestCase extends TestCase
         $this->assertIsList($sortedArguments);
         $this->assertSame(
             $expectedResult,
-            $fn(...$sortedArguments)
+            $fn(...$sortedArguments),
         );
     }
 
     public function testOrderArgumentsSpreadFunction(): void
     {
-        $fn = static fn (int $foo, int ...$rest): array => \func_get_args();
+        $fn = static fn(int $foo, int ...$rest): array => \func_get_args();
         $reflection = new \ReflectionFunction($fn);
 
         $sortedArguments = Reflection::orderArguments(
             $reflection,
-            [1, 2, 3, 4]
+            [1, 2, 3, 4],
         );
 
         $this->assertSame(
             [1, 2, 3, 4],
-            $fn(...$sortedArguments)
+            $fn(...$sortedArguments),
         );
     }
 
     public function testOrderArgumentsConflictOrder(): void
     {
-        $fn = static fn (int $foo, int $bar, int $baz = 42): array => \func_get_args();
+        $fn = static fn(int $foo, int $bar, int $baz = 42): array => \func_get_args();
         $reflection = new \ReflectionFunction($fn);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches(
-            regularExpression: '/Parameter .* \$foo .* received two conflicting arguments - named and positional/'
+            regularExpression: '/Parameter .* \$foo .* received two conflicting arguments - named and positional/',
         );
 
 
@@ -130,7 +128,7 @@ final class ReflectionTestCase extends TestCase
         $reflection = new \ReflectionMethod($this, 'publicTestFunction');
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(sprintf(
+        $this->expectExceptionMessage(\sprintf(
             'Parameter #%d $%s of %s received two conflicting arguments - named and positional.',
             0,
             'foo',
@@ -148,7 +146,7 @@ final class ReflectionTestCase extends TestCase
         $reflection = new \ReflectionMethod($this, __FUNCTION__);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(sprintf(
+        $this->expectExceptionMessage(\sprintf(
             'Too many arguments passed to %s: defined %d, got %d.',
             __CLASS__ . '::' . __FUNCTION__ . '()',
             $reflection->getNumberOfParameters(),
@@ -161,7 +159,5 @@ final class ReflectionTestCase extends TestCase
         );
     }
 
-    public function publicTestFunction(int $foo, int $bar): void
-    {
-    }
+    public function publicTestFunction(int $foo, int $bar): void {}
 }

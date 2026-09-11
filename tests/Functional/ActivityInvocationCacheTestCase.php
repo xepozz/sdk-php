@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Functional;
 
-use DateTimeImmutable;
-use Exception;
 use Temporal\DataConverter\EncodedValues;
 use Temporal\DataConverter\ValuesInterface;
 use Temporal\Exception\Failure\ApplicationFailure;
@@ -18,12 +16,6 @@ class ActivityInvocationCacheTestCase extends AbstractFunctional
 {
     private RoadRunnerActivityInvocationCache $cache;
 
-    protected function setUp(): void
-    {
-        $this->cache = RoadRunnerActivityInvocationCache::create();
-        parent::setUp();
-    }
-
     public function testActivityCompletionIsStoredInCache(): void
     {
         $this->cache->saveCompletion('MyActivity.myMethod', 'foo');
@@ -32,10 +24,10 @@ class ActivityInvocationCacheTestCase extends AbstractFunctional
         $value = null;
         $rejected = null;
         $result->then(
-            function ($resolved) use (&$value): void {
+            static function ($resolved) use (&$value): void {
                 $value = $resolved;
             },
-            function (\Throwable $exception) use (&$rejected): void {
+            static function (\Throwable $exception) use (&$rejected): void {
                 $rejected = $exception;
             },
         );
@@ -53,10 +45,10 @@ class ActivityInvocationCacheTestCase extends AbstractFunctional
         $rejected = null;
         $resolved = false;
         $result->then(
-            function ($value) use (&$resolved): void {
+            static function ($value) use (&$resolved): void {
                 $resolved = true;
             },
-            function (\Throwable $exception) use (&$rejected): void {
+            static function (\Throwable $exception) use (&$rejected): void {
                 $rejected = $exception;
             },
         );
@@ -79,6 +71,12 @@ class ActivityInvocationCacheTestCase extends AbstractFunctional
         $this->assertFalse($this->cache->canHandle($this->makeRequest('StartWorkflow', 'MyActivity.myMethod', EncodedValues::empty())));
     }
 
+    protected function setUp(): void
+    {
+        $this->cache = RoadRunnerActivityInvocationCache::create();
+        parent::setUp();
+    }
+
     private function makeRequest(string $name, string $activityName, ValuesInterface $values): ServerRequestInterface
     {
         $options = [
@@ -86,9 +84,9 @@ class ActivityInvocationCacheTestCase extends AbstractFunctional
             'info' => [
                 'TaskToken' => 'CiQ2ODM5YzcwOS05MGQwLTQ2ZjktOTYyYS03NTM3OWJhMWQ4MzcSJDQ5NDI1YjgwLTAwNTctNDA5Ni04ZWQyLTJmZjMzMzY5MmM3YxokOTI2MGFlZTMtYzhhMC00ZTMxLWI3ZWUtNWQ2NTZhYWEzMjZiIAUoATIBNUITU2ltcGxlQWN0aXZpdHkuZWNobw==',
                 'ActivityType' => ['Name' => $activityName],
-            ]
+            ],
         ];
-        $info = new TickInfo(new DateTimeImmutable());
-        return new ServerRequest(name: $name, info: $info, options: $options, payloads:  $values);
+        $info = new TickInfo(new \DateTimeImmutable());
+        return new ServerRequest(name: $name, info: $info, options: $options, payloads: $values);
     }
 }

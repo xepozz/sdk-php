@@ -8,7 +8,9 @@ final class Support
 {
     public static function echoException(\Throwable $e): void
     {
-        $trace = \array_filter($e->getTrace(), static fn(array $trace): bool =>
+        $trace = \array_filter(
+            $e->getTrace(),
+            static fn(array $trace): bool =>
             isset($trace['file']) &&
             !\str_contains($trace['file'], DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR),
         );

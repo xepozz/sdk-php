@@ -15,25 +15,27 @@ use Temporal\Workflow\QueryMethod;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 class WorkflowWithQueries
 {
-    /** @WorkflowMethod */
+    /**
+     * @WorkflowMethod
+     */
     #[WorkflowMethod]
-    public function handler(): void
-    {
-    }
+    public function handler(): void {}
 
-    /** @QueryMethod */
+    /**
+     * @QueryMethod
+     */
     #[QueryMethod]
-    public function a(): void
-    {
-    }
+    public function a(): void {}
 
-    /** @QueryMethod */
+    /**
+     * @QueryMethod
+     */
     #[QueryMethod]
-    public function b(): void
-    {
-    }
+    public function b(): void {}
 }

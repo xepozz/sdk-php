@@ -23,12 +23,12 @@ class AsyncClosureTestCase extends AbstractClient
 {
     use WithoutTimeSkipping;
 
-    public function testAsyncIsCancelledWithTimer()
+    public function testAsyncIsCancelledWithTimer(): void
     {
         $client = $this->createClient();
         $workflow = $client->newWorkflowStub(
             AsyncClosureWorkflow::class,
-            WorkflowOptions::new()->withWorkflowExecutionTimeout(3)
+            WorkflowOptions::new()->withWorkflowExecutionTimeout(3),
         );
 
         $run = $client->start($workflow);

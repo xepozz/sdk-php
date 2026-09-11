@@ -5,7 +5,6 @@ declare(strict_types=1);
 
 use Temporal\Client\GRPC\ServiceClient;
 use Temporal\Client\WorkflowClient;
-use Temporal\Testing\Replay\WorkflowReplayer;
 use Temporal\Testing\TemporalServer;
 use Temporal\Tests\TestCase;
 use Temporal\Tests\Workflow\ProtoPayloadWorkflow;
@@ -13,20 +12,6 @@ use Temporal\Tests\Workflow\ProtoPayloadWorkflow;
 final class DataConverterTestCase extends TestCase
 {
     private WorkflowClient $workflowClient;
-
-    protected function setUp(): void
-    {
-        $this->workflowClient = new WorkflowClient(
-            ServiceClient::create(TemporalServer::address())
-        );
-
-        parent::setUp();
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-    }
 
     public function testProtobufWorkflow(): void
     {
@@ -36,5 +21,19 @@ final class DataConverterTestCase extends TestCase
         $run->getResult(\Temporal\Api\Common\V1\WorkflowExecution::class, 5);
 
         $this->assertTrue(true);
+    }
+
+    protected function setUp(): void
+    {
+        $this->workflowClient = new WorkflowClient(
+            ServiceClient::create(TemporalServer::address()),
+        );
+
+        parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
     }
 }

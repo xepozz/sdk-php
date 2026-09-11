@@ -18,16 +18,9 @@ use function PHPUnit\Framework\assertTrue;
 final class AwaitWithTimeoutTestCase extends AbstractUnit
 {
     private WorkerFactoryInterface $factory;
+
     /** @var WorkerMock|WorkerInterface */
     private $worker;
-
-    protected function setUp(): void
-    {
-        $this->factory = WorkerFactoryMock::create();
-        $this->worker = $this->factory->newWorker();
-
-        parent::setUp();
-    }
 
     public function testAwaitWithTimeoutReturnsFalseIfTimeoutWasOff(): void
     {
@@ -38,11 +31,11 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
                 #[WorkflowMethod(name: 'AwaitWorkflow')]
                 public function handler(): iterable
                 {
-                    $result = yield Workflow::awaitWithTimeout(5, fn() => false);
+                    $result = yield Workflow::awaitWithTimeout(5, static fn() => false);
                     assertFalse($result);
                     return 'OK';
                 }
-            }
+            },
         );
 
         $this->worker->runWorkflow('AwaitWorkflow');
@@ -62,10 +55,10 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
                 #[WorkflowMethod(name: 'AwaitWorkflow')]
                 public function handler(): iterable
                 {
-                    yield Workflow::awaitWithTimeout(5, fn() => false);
+                    yield Workflow::awaitWithTimeout(5, static fn() => false);
                     return 'OK';
                 }
-            }
+            },
         );
 
         $this->worker->runWorkflow('AwaitWorkflow');
@@ -83,11 +76,11 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
                 #[WorkflowMethod(name: 'AwaitWorkflow')]
                 public function handler(): iterable
                 {
-                    $result = yield Workflow::awaitWithTimeout(5, fn() => true);
+                    $result = yield Workflow::awaitWithTimeout(5, static fn() => true);
                     assertTrue($result);
                     return 'OK';
                 }
-            }
+            },
         );
 
         $this->worker->runWorkflow('AwaitWorkflow');
@@ -103,12 +96,13 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
             #[Workflow\WorkflowInterface]
             class {
                 private bool $doCancel = false;
+
                 #[WorkflowMethod(name: 'AwaitWorkflow')]
                 public function handler(): iterable
                 {
                     $result = yield Workflow::awaitWithTimeout(
                         50,
-                        fn () => $this->doCancel,
+                        fn() => $this->doCancel,
                     );
                     assertTrue($result);
 
@@ -124,7 +118,7 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
                 {
                     $this->doCancel = true;
                 }
-            }
+            },
         );
 
         $this->worker->runWorkflow('AwaitWorkflow');
@@ -132,5 +126,13 @@ final class AwaitWithTimeoutTestCase extends AbstractUnit
         $this->worker->assertWorkflowReturns('CANCEL');
 
         $this->factory->run($this->worker);
+    }
+
+    protected function setUp(): void
+    {
+        $this->factory = WorkerFactoryMock::create();
+        $this->worker = $this->factory->newWorker();
+
+        parent::setUp();
     }
 }

@@ -9,12 +9,12 @@ use PHPUnit\Framework\TestCase;
 
 final class ArchTest extends TestCase
 {
+    use ArchitectureAsserts;
+
     protected array $excludedPaths = [
         'vendor',
         'tests',
     ];
-
-    use ArchitectureAsserts;
 
     public function testForgottenDebugFunctions(): void
     {

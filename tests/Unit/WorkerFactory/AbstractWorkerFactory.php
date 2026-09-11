@@ -17,6 +17,4 @@ use Temporal\Tests\Unit\AbstractUnit;
  * @group worker
  * @group unit
  */
-abstract class AbstractWorkerFactory extends AbstractUnit
-{
-}
+abstract class AbstractWorkerFactory extends AbstractUnit {}

@@ -34,8 +34,7 @@ final class ClientFactory
     public function __construct(
         #[Proxy] private readonly ContainerInterface $container,
         #[Proxy] private readonly InvokerInterface $invoker,
-    ) {
-    }
+    ) {}
 
     public function workflowClient(\ReflectionParameter $context): WorkflowClientInterface
     {

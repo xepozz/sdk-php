@@ -6,11 +6,9 @@ namespace Temporal\Tests\Unit\Router;
 
 use Temporal\Workflow;
 
-#[Workflow\WorkflowInterface()]
+#[Workflow\WorkflowInterface]
 final class DummyWorkflow
 {
     #[Workflow\WorkflowMethod]
-    public function doNothing(): void
-    {
-    }
+    public function doNothing(): void {}
 }

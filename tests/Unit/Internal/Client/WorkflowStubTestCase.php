@@ -33,20 +33,9 @@ use Temporal\Workflow\WorkflowExecution;
 final class WorkflowStubTestCase extends TestCase
 {
     private WorkflowStub $workflowStub;
+
     /** @var MockObject|ServiceClientInterface */
     private $serviceClient;
-
-    protected function setUp(): void
-    {
-        $this->serviceClient = $this->createMock(ServiceClientInterface::class);
-        $this->workflowStub = new WorkflowStub(
-            $this->serviceClient,
-            new ClientOptions(),
-            $this->createMock(DataConverterInterface::class),
-            (new PipelineProvider([]))->getPipeline(WorkflowClientCallsInterceptor::class),
-        );
-        $this->workflowStub->setExecution(new WorkflowExecution());
-    }
 
     public function testSignalThrowsWorkflowNotFoundException(): void
     {
@@ -55,11 +44,11 @@ final class WorkflowStubTestCase extends TestCase
         $status->code = StatusCode::NOT_FOUND;
         $serviceClientException = new ServiceClientException($status);
         $this->serviceClient
-            ->expects(static::once())
+            ->expects(self::once())
             ->method('SignalWorkflowExecution')
             ->willThrowException($serviceClientException);
 
-        static::expectException(WorkflowNotFoundException::class);
+        self::expectException(WorkflowNotFoundException::class);
 
         $this->workflowStub->signal('signalName');
     }
@@ -71,11 +60,11 @@ final class WorkflowStubTestCase extends TestCase
         $status->code = StatusCode::INTERNAL;
         $serviceClientException = new ServiceClientException($status);
         $this->serviceClient
-            ->expects(static::once())
+            ->expects(self::once())
             ->method('SignalWorkflowExecution')
             ->willThrowException($serviceClientException);
 
-        static::expectException(WorkflowServiceException::class);
+        self::expectException(WorkflowServiceException::class);
 
         $this->workflowStub->signal('signalName');
     }
@@ -84,28 +73,40 @@ final class WorkflowStubTestCase extends TestCase
     {
         $responseWithHistory = (new GetWorkflowExecutionHistoryResponse())
             ->setHistory(
-                (new History)->setEvents(
+                (new History())->setEvents(
                     [
                         (new HistoryEvent())
                             ->setEventType(EventType::EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED)
                             ->setWorkflowExecutionCompletedEventAttributes(
                                 (new WorkflowExecutionCompletedEventAttributes())->setResult(
-                                    (new Payloads())->setPayloads([(new Payload())->setData('hello')])
-                                )
-                            )
-                    ]
-                )
+                                    (new Payloads())->setPayloads([(new Payload())->setData('hello')]),
+                                ),
+                            ),
+                    ],
+                ),
             );
 
         $this->serviceClient
-            ->expects(static::exactly(2))
+            ->expects(self::exactly(2))
             ->method('GetWorkflowExecutionHistory')
             ->willReturnOnConsecutiveCalls(
                 new GetWorkflowExecutionHistoryResponse(),
-                $responseWithHistory
+                $responseWithHistory,
             );
 
         $result = $this->workflowStub->getResult();
         $this->assertNull($result);
+    }
+
+    protected function setUp(): void
+    {
+        $this->serviceClient = $this->createMock(ServiceClientInterface::class);
+        $this->workflowStub = new WorkflowStub(
+            $this->serviceClient,
+            new ClientOptions(),
+            $this->createMock(DataConverterInterface::class),
+            (new PipelineProvider([]))->getPipeline(WorkflowClientCallsInterceptor::class),
+        );
+        $this->workflowStub->setExecution(new WorkflowExecution());
     }
 }

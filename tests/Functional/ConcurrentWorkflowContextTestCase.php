@@ -23,14 +23,6 @@ use Temporal\Tests\Workflow\TestContextLeakWorkflow;
  */
 class ConcurrentWorkflowContextTestCase extends AbstractClient
 {
-    public function setUp(): void
-    {
-        parent::setUp();
-
-        // emulate connection to parent server
-        $_SERVER['RR_RPC'] = 'tcp://127.0.0.1:6001';
-    }
-
     public function testConcurrentWorkflowContext(): void
     {
         $client = $this->createClient();
@@ -58,7 +50,7 @@ class ConcurrentWorkflowContextTestCase extends AbstractClient
         $workflows = 10;
         $log = $generators = [];
 
-        $addWorkflow = function () use (&$generators) {
+        $addWorkflow = function () use (&$generators): void {
             $c = \count($generators) % 3;
             $c === 1 and $generators[] = $this->iterateVoidActivityStubWorkflow();
             $generators[] = $this->iterateOtherWorkflow($c === 2);
@@ -89,11 +81,25 @@ class ConcurrentWorkflowContextTestCase extends AbstractClient
         $worker->run($this, Splitter::createFromString(\implode("\n", $log))->getQueue());
     }
 
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        // emulate connection to parent server
+        $_SERVER['RR_RPC'] = 'tcp://127.0.0.1:6001';
+    }
+
+    private static function getId(): int
+    {
+        static $id = 9000;
+        return ++$id;
+    }
+
     private function iterateVoidActivityStubWorkflow(): iterable
     {
         $uuid1 = Uuid::v4();
         $uuid2 = Uuid::v4();
-        $emptyPayloadStr= '';
+        $emptyPayloadStr = '';
         yield <<<EVENT
             [0m	[{"command":"StartWorkflow","options":{"info":{"WorkflowExecution":{"ID":"$uuid1","RunID":"$uuid2"},"WorkflowType":{"Name":"VoidActivityStubWorkflow"},"TaskQueueName":"default","WorkflowExecutionTimeout":315360000000000000,"WorkflowRunTimeout":315360000000000000,"WorkflowTaskTimeout":0,"Namespace":"default","Attempt":1,"CronSchedule":"","ContinuedExecutionRunID":"","ParentWorkflowNamespace":"","ParentWorkflowExecution":null,"Memo":null,"SearchAttributes":null,"BinaryChecksum":"8646d54f9f6b22f407d6d22254eea9f5"}},"payloads":"$emptyPayloadStr"}] {"taskQueue":"default","tickTime":"2021-01-12T15:25:13.3983204Z"}
             EVENT;
@@ -156,11 +162,5 @@ class ConcurrentWorkflowContextTestCase extends AbstractClient
         yield <<<EVENT
             [0m	[{"payloads":"ChkKFwoIZW5jb2RpbmcSC2JpbmFyeS9udWxs"}]	{"receive": true}
             EVENT;
-    }
-
-    private static function getId(): int
-    {
-        static $id = 9000;
-        return ++$id;
     }
 }

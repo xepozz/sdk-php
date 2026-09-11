@@ -15,6 +15,5 @@ final class ReadonlyProperty
 {
     public function __construct(
         public readonly ChildDto $child,
-    ) {
-    }
+    ) {}
 }

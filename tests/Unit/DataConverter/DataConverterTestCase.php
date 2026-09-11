@@ -16,7 +16,6 @@ use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\DataConverter\EncodingKeys;
 use Temporal\DataConverter\ProtoConverter;
-use Temporal\DataConverter\ProtoJsonConverter;
 use Temporal\DataConverter\Type;
 use Temporal\Exception\DataConverterException;
 use Temporal\Tests\Proto\Test;
@@ -41,13 +40,13 @@ class DataConverterTestCase extends AbstractUnit
             Type::TYPE_BOOL . ' => ' . Type::TYPE_ANY   => [Type::TYPE_ANY, true],
             Type::TYPE_VOID . ' => ' . Type::TYPE_ANY   => [Type::TYPE_ANY, null],
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_ANY  => [Type::TYPE_ANY, []],
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_ANY => [Type::TYPE_ANY, (object)[]],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_ANY => [Type::TYPE_ANY, (object) []],
             Type::TYPE_NULL . ' => ' . Type::TYPE_ANY   => [Type::TYPE_ANY, null],
             Type::TYPE_TRUE . ' => ' . Type::TYPE_ANY   => [Type::TYPE_ANY, true],
             Type::TYPE_FALSE . ' => ' . Type::TYPE_ANY  => [Type::TYPE_ANY, false],
 
             Type::TYPE_ARRAY  => [Type::TYPE_ARRAY, [1, 2, 3]],
-            Type::TYPE_OBJECT => [Type::TYPE_OBJECT, (object)['field' => 'value']],
+            Type::TYPE_OBJECT => [Type::TYPE_OBJECT, (object) ['field' => 'value']],
             Type::TYPE_STRING => [Type::TYPE_STRING, 'string'],
             Type::TYPE_BOOL   => [Type::TYPE_BOOL, true],
             Type::TYPE_INT    => [Type::TYPE_INT, 42],
@@ -61,13 +60,10 @@ class DataConverterTestCase extends AbstractUnit
         ];
     }
 
-    /**
-     * @return array
-     */
     public static function negativeTypesDataProvider(): array
     {
         return [
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_STRING => [Type::TYPE_STRING, (object)['field' => 'value']],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_STRING => [Type::TYPE_STRING, (object) ['field' => 'value']],
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_STRING  => [Type::TYPE_STRING, [1, 2, 3]],
             Type::TYPE_FLOAT . ' => ' . Type::TYPE_STRING  => [Type::TYPE_STRING, .42],
             Type::TYPE_INT . ' => ' . Type::TYPE_STRING    => [Type::TYPE_STRING, 42],
@@ -75,14 +71,14 @@ class DataConverterTestCase extends AbstractUnit
             Type::TYPE_FALSE . ' => ' . Type::TYPE_STRING  => [Type::TYPE_STRING, false],
             Type::TYPE_VOID . ' => ' . Type::TYPE_STRING   => [Type::TYPE_STRING, null],
 
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_BOOL => [Type::TYPE_BOOL, (object)['field' => 'value']],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_BOOL => [Type::TYPE_BOOL, (object) ['field' => 'value']],
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_BOOL  => [Type::TYPE_BOOL, [1, 2, 3]],
             Type::TYPE_FLOAT . ' => ' . Type::TYPE_BOOL  => [Type::TYPE_BOOL, .42],
             Type::TYPE_INT . ' => ' . Type::TYPE_BOOL    => [Type::TYPE_BOOL, 42],
             Type::TYPE_STRING . ' => ' . Type::TYPE_BOOL => [Type::TYPE_BOOL, 'string'],
             Type::TYPE_VOID . ' => ' . Type::TYPE_BOOL   => [Type::TYPE_BOOL, null],
 
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_INT => [Type::TYPE_INT, (object)['field' => 'value']],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_INT => [Type::TYPE_INT, (object) ['field' => 'value']],
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_INT  => [Type::TYPE_INT, [1, 2, 3]],
             Type::TYPE_FLOAT . ' => ' . Type::TYPE_INT  => [Type::TYPE_INT, .42],
             Type::TYPE_STRING . ' => ' . Type::TYPE_INT => [Type::TYPE_INT, 'string'],
@@ -90,7 +86,7 @@ class DataConverterTestCase extends AbstractUnit
             Type::TYPE_FALSE . ' => ' . Type::TYPE_INT  => [Type::TYPE_INT, false],
             Type::TYPE_VOID . ' => ' . Type::TYPE_INT   => [Type::TYPE_INT, null],
 
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_FLOAT => [Type::TYPE_FLOAT, (object)['field' => 'value']],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_FLOAT => [Type::TYPE_FLOAT, (object) ['field' => 'value']],
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_FLOAT  => [Type::TYPE_FLOAT, [1, 2, 3]],
             Type::TYPE_INT . ' => ' . Type::TYPE_FLOAT    => [Type::TYPE_FLOAT, 42],
             Type::TYPE_STRING . ' => ' . Type::TYPE_FLOAT => [Type::TYPE_FLOAT, 'string'],
@@ -124,7 +120,7 @@ class DataConverterTestCase extends AbstractUnit
     {
         return [
             Type::TYPE_ARRAY . ' => ' . Type::TYPE_VOID  => [Type::TYPE_VOID, [1, 2, 3]],
-            Type::TYPE_OBJECT . ' => ' . Type::TYPE_VOID => [Type::TYPE_VOID, (object)['field' => 'value']],
+            Type::TYPE_OBJECT . ' => ' . Type::TYPE_VOID => [Type::TYPE_VOID, (object) ['field' => 'value']],
             Type::TYPE_FLOAT . ' => ' . Type::TYPE_VOID  => [Type::TYPE_VOID, .42],
             Type::TYPE_INT . ' => ' . Type::TYPE_VOID    => [Type::TYPE_VOID, 42],
             Type::TYPE_STRING . ' => ' . Type::TYPE_VOID => [Type::TYPE_VOID, 'string'],
@@ -134,15 +130,6 @@ class DataConverterTestCase extends AbstractUnit
     }
 
     /**
-     * @return DataConverterInterface
-     */
-    protected function create(): DataConverterInterface
-    {
-        return DataConverter::createDefault();
-    }
-
-    /**
-     * @param string $type
      * @param mixed $value
      */
     #[DataProvider('typesDataProvider')]
@@ -156,7 +143,6 @@ class DataConverterTestCase extends AbstractUnit
     }
 
     /**
-     * @param string $type
      * @param mixed $value
      */
     #[DataProvider('negativeTypesDataProvider')]
@@ -169,7 +155,6 @@ class DataConverterTestCase extends AbstractUnit
     }
 
     /**
-     * @param string $type
      * @param mixed $value
      */
     #[DataProvider('nullableTypesDataProvider')]
@@ -204,5 +189,10 @@ class DataConverterTestCase extends AbstractUnit
         $payload = DataConverter::createDefault()->toPayload($message);
 
         self::assertSame(EncodingKeys::METADATA_ENCODING_PROTOBUF_JSON, $payload->getMetadata()['encoding']);
+    }
+
+    protected function create(): DataConverterInterface
+    {
+        return DataConverter::createDefault();
     }
 }

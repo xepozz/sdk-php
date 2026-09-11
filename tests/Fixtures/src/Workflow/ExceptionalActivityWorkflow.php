@@ -27,8 +27,8 @@ class ExceptionalActivityWorkflow
             SimpleActivity::class,
             ActivityOptions::new()->withStartToCloseTimeout(5)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(1)
-                )
+                    RetryOptions::new()->withMaximumAttempts(1),
+                ),
         );
 
         return yield $simple->fail();

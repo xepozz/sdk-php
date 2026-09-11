@@ -12,6 +12,15 @@ use Temporal\Internal\Support\GarbageCollector;
 #[CoversClass(\Temporal\Internal\Support\GarbageCollector::class)]
 final class GarbageCollectorTestCase extends TestCase
 {
+    public static function provideCheck(): iterable
+    {
+        yield [1, 1, true];
+        yield [2, 1, false];
+        yield [3, 2, false];
+        yield [10, 9, false];
+        yield [10, 10, true];
+    }
+
     #[DataProvider('provideCheck')]
     public function testCheckTicks(int $counter, int $iterations, bool $result): void
     {
@@ -50,14 +59,5 @@ final class GarbageCollectorTestCase extends TestCase
         $gc = new GarbageCollector(100, 1, \time() - 2);
 
         $this->assertTrue($gc->check());
-    }
-
-    public static function provideCheck(): iterable
-    {
-        yield [1, 1, true];
-        yield [2, 1, false];
-        yield [3, 2, false];
-        yield [10, 9, false];
-        yield [10, 10, true];
     }
 }

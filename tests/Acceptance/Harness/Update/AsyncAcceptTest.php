@@ -85,13 +85,13 @@ class FeatureWorkflow
     }
 
     #[Workflow\SignalMethod('finish')]
-    public function finish()
+    public function finish(): void
     {
         $this->done = true;
     }
 
     #[Workflow\SignalMethod('unblock')]
-    public function unblock()
+    public function unblock(): void
     {
         $this->blocked = false;
     }

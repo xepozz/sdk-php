@@ -47,7 +47,7 @@ class CancelSignalledChildWorkflow
                 $waitSignalled->resolve(null);
 
                 return yield $call;
-            }
+            },
         );
 
         // only cancel scope when signal dispatched

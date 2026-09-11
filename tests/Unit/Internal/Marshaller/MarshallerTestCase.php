@@ -39,18 +39,18 @@ final class MarshallerTestCase extends TestCase
 
         $this->assertSame(
             ['uuid' => 'd1fb065d-f118-477d-a62a-ef93dc7ee03f', 'nullableUuid' => null],
-            $marshaller->marshal(new Uuid(UuidV4::fromString('d1fb065d-f118-477d-a62a-ef93dc7ee03f')))
+            $marshaller->marshal(new Uuid(UuidV4::fromString('d1fb065d-f118-477d-a62a-ef93dc7ee03f'))),
         );
 
         $this->assertSame(
             [
                 'uuid' => 'd1fb065d-f118-477d-a62a-ef93dc7ee03f',
-                'nullableUuid' => 'c4cf52f6-32ba-428c-ae7d-25aaa4057f5b'
+                'nullableUuid' => 'c4cf52f6-32ba-428c-ae7d-25aaa4057f5b',
             ],
             $marshaller->marshal(new Uuid(
                 UuidV4::fromString('d1fb065d-f118-477d-a62a-ef93dc7ee03f'),
                 UuidV4::fromString('c4cf52f6-32ba-428c-ae7d-25aaa4057f5b'),
-            ))
+            )),
         );
     }
 
@@ -64,8 +64,8 @@ final class MarshallerTestCase extends TestCase
             new Uuid(UuidV4::fromString('d1fb065d-f118-477d-a62a-ef93dc7ee03f'), null),
             $marshaller->unmarshal(
                 ['uuid' => 'd1fb065d-f118-477d-a62a-ef93dc7ee03f', 'nullableUuid' => null],
-                $ref->newInstanceWithoutConstructor()
-            )
+                $ref->newInstanceWithoutConstructor(),
+            ),
         );
 
         $this->assertEquals(
@@ -76,10 +76,10 @@ final class MarshallerTestCase extends TestCase
             $marshaller->unmarshal(
                 [
                     'uuid' => 'd1fb065d-f118-477d-a62a-ef93dc7ee03f',
-                    'nullableUuid' => 'c4cf52f6-32ba-428c-ae7d-25aaa4057f5b'
+                    'nullableUuid' => 'c4cf52f6-32ba-428c-ae7d-25aaa4057f5b',
                 ],
-                $ref->newInstanceWithoutConstructor()
-            )
+                $ref->newInstanceWithoutConstructor(),
+            ),
         );
     }
 

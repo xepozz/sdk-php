@@ -13,11 +13,11 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 
 use Temporal\Activity\ActivityInterface;
 
-/** @ActivityInterface */
+/**
+ * @ActivityInterface
+ */
 #[ActivityInterface]
 class ChildActivityMethods extends ParentActivityMethods
 {
-    public function activityMethod(): void
-    {
-    }
+    public function activityMethod(): void {}
 }

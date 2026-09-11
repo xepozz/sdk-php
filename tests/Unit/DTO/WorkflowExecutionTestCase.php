@@ -26,7 +26,7 @@ class WorkflowExecutionTestCase extends AbstractDTOMarshalling
 
         $expected = [
             'ID' => '00000000-0000-0000-0000-000000000000',
-            'RunID' => null
+            'RunID' => null,
         ];
 
         $this->assertSame($expected, $this->marshal($dto));

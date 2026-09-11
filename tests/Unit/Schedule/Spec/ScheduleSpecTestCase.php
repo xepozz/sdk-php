@@ -16,6 +16,21 @@ use Temporal\Client\Schedule\Spec\StructuredCalendarSpec;
 #[CoversClass(\Temporal\Client\Schedule\Spec\ScheduleSpec::class)]
 class ScheduleSpecTestCase extends TestCase
 {
+    public static function provideStartEndTime(): iterable
+    {
+        yield 'string' => ['2024-10-01T00:00:00Z', '2024-10-01T00:00:00+00:00'];
+        yield 'datetime' => [new \DateTimeImmutable('2024-10-01T00:00:00Z'), '2024-10-01T00:00:00+00:00'];
+        yield 'unset' => [null, null, '2024-10-01T00:00:00Z', '2024-10-01T00:00:00+00:00'];
+    }
+
+    public static function provideJitter(): iterable
+    {
+        yield 'string' => ['10m', '0/0/0/0/10/0'];
+        yield 'int' => [10, '0/0/0/0/0/10'];
+        yield 'interval' => [new \DateInterval('PT10M'), '0/0/0/0/10/0'];
+        yield 'null' => [null, '0/0/0/0/0/0', '10m', '0/0/0/0/10/0'];
+    }
+
     public function testWithTimezoneName(): void
     {
         $init = ScheduleSpec::new();
@@ -43,7 +58,7 @@ class ScheduleSpecTestCase extends TestCase
         mixed $withValue,
         ?string $expectedValue,
         mixed $initValue = null,
-        ?string $expectedInitValue = null
+        ?string $expectedInitValue = null,
     ): void {
         $init = ScheduleSpec::new();
         $init === null or $init = $init->withStartTime($initValue);
@@ -60,7 +75,7 @@ class ScheduleSpecTestCase extends TestCase
         mixed $withValue,
         ?string $expectedValue,
         mixed $initValue = null,
-        ?string $expectedInitValue = null
+        ?string $expectedInitValue = null,
     ): void {
         $init = ScheduleSpec::new();
         $init === null or $init = $init->withStartTime($initValue);
@@ -72,19 +87,12 @@ class ScheduleSpecTestCase extends TestCase
         $this->assertSame($expectedValue, $new->startTime?->format(\DateTimeInterface::ATOM));
     }
 
-    public static function provideStartEndTime(): iterable
-    {
-        yield 'string' => ['2024-10-01T00:00:00Z', '2024-10-01T00:00:00+00:00'];
-        yield 'datetime' => [new \DateTimeImmutable('2024-10-01T00:00:00Z'), '2024-10-01T00:00:00+00:00'];
-        yield 'unset' => [null, null, '2024-10-01T00:00:00Z', '2024-10-01T00:00:00+00:00'];
-    }
-
     #[DataProvider('provideJitter')]
     public function testWithJitter(
         mixed $withValue,
         string $expectedValue,
         mixed $initValue = null,
-        string $expectedInitValue = '0/0/0/0/0/0'
+        string $expectedInitValue = '0/0/0/0/0/0',
     ): void {
         $init = ScheduleSpec::new();
         $init === null or $init = $init->withJitter($initValue);
@@ -96,18 +104,10 @@ class ScheduleSpecTestCase extends TestCase
         $this->assertSame($expectedValue, $new->jitter->format('%y/%m/%d/%h/%i/%s'));
     }
 
-    public static function provideJitter(): iterable
-    {
-        yield 'string' => ['10m', '0/0/0/0/10/0'];
-        yield 'int' => [10, '0/0/0/0/0/10'];
-        yield 'interval' => [new \DateInterval('PT10M'), '0/0/0/0/10/0'];
-        yield 'null' => [null, '0/0/0/0/0/0', '10m', '0/0/0/0/10/0'];
-    }
-
     public function testWithCalendarList(): void
     {
         $init = ScheduleSpec::new();
-        $calendars =[
+        $calendars = [
             CalendarSpec::new()->withSecond(6)->withMinute('*/6'),
             CalendarSpec::new()->withSecond(6)->withMinute('*/5'),
         ];
@@ -121,7 +121,7 @@ class ScheduleSpecTestCase extends TestCase
 
     public function testWithCalendarListUnset(): void
     {
-        $calendars =[
+        $calendars = [
             CalendarSpec::new()->withSecond(6)->withMinute('*/6'),
             CalendarSpec::new()->withSecond(6)->withMinute('*/5'),
         ];
@@ -137,11 +137,11 @@ class ScheduleSpecTestCase extends TestCase
     public function testWithAddedCalendar(): void
     {
         $init = ScheduleSpec::new()->withCalendarList(
-            CalendarSpec::new()->withSecond(6)->withMinute('*/6')
+            CalendarSpec::new()->withSecond(6)->withMinute('*/6'),
         );
 
         $new = $init->withAddedCalendar(
-            CalendarSpec::new()->withSecond(6)->withMinute('*/5')
+            CalendarSpec::new()->withSecond(6)->withMinute('*/5'),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -279,11 +279,11 @@ class ScheduleSpecTestCase extends TestCase
     public function testWithAddedStructuredCalendar(): void
     {
         $init = ScheduleSpec::new()->withStructuredCalendarList(
-            StructuredCalendarSpec::new()->withHours($r1 = Range::new(1, 12, 2))
+            StructuredCalendarSpec::new()->withHours($r1 = Range::new(1, 12, 2)),
         );
 
         $new = $init->withAddedStructuredCalendar(
-            StructuredCalendarSpec::new()->withDaysOfWeek($r2 = Range::new(1, 5))
+            StructuredCalendarSpec::new()->withDaysOfWeek($r2 = Range::new(1, 5)),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');

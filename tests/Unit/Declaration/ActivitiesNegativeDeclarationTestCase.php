@@ -26,7 +26,6 @@ use Temporal\Tests\Unit\Declaration\Fixture\ActivityWithPublicStaticMethod;
 class ActivitiesNegativeDeclarationTestCase extends AbstractDeclaration
 {
     /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Checks for errors when reading activity class methods with the same name")]
@@ -42,15 +41,14 @@ class ActivitiesNegativeDeclarationTestCase extends AbstractDeclaration
             [
                 ActivityNamesDuplication::class,
                 $reflection->getFileName(),
-                $reflection->getStartLine()
-            ]
+                $reflection->getStartLine(),
+            ],
         ));
 
         $activities = $reader->fromClass(ActivityNamesDuplication::class);
     }
 
     /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Checks for errors when declaring a private method with an activity method attribute declaration")]
@@ -62,15 +60,14 @@ class ActivitiesNegativeDeclarationTestCase extends AbstractDeclaration
             'An Activity method can only be a public non-static method, but %s::%s() does not meet these criteria',
             [
                 ActivityWithPrivateMethod::class,
-                'invalidActivityPrivateMethod'
-            ]
+                'invalidActivityPrivateMethod',
+            ],
         ));
 
         $reader->fromClass(ActivityWithPrivateMethod::class);
     }
 
     /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Checks for errors when declaring a protected method with an activity method attribute declaration")]
@@ -82,15 +79,14 @@ class ActivitiesNegativeDeclarationTestCase extends AbstractDeclaration
             'An Activity method can only be a public non-static method, but %s::%s() does not meet these criteria',
             [
                 ActivityWithProtectedMethod::class,
-                'invalidActivityProtectedMethod'
-            ]
+                'invalidActivityProtectedMethod',
+            ],
         ));
 
         $reader->fromClass(ActivityWithProtectedMethod::class);
     }
 
     /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Checks for errors when declaring a public static method with an activity method attribute declaration")]
@@ -102,8 +98,8 @@ class ActivitiesNegativeDeclarationTestCase extends AbstractDeclaration
             'An Activity method can only be a public non-static method, but %s::%s() does not meet these criteria',
             [
                 ActivityWithPublicStaticMethod::class,
-                'invalidActivityPublicStaticMethod'
-            ]
+                'invalidActivityPublicStaticMethod',
+            ],
         ));
 
         $reader->fromClass(ActivityWithPublicStaticMethod::class);

@@ -16,17 +16,6 @@ final class CommandHandlerFactory
         $this->handlers = $handlers;
     }
 
-    public function getHandler(CommandInterface $request): CommandHandlerInterface
-    {
-        foreach ($this->handlers as $handler) {
-            if ($handler->supports($request)) {
-                return $handler;
-            }
-        }
-
-        throw new \LogicException("Unsupported request: " . get_class($request));
-    }
-
     public static function create(): self
     {
         return new self(
@@ -37,5 +26,16 @@ final class CommandHandlerFactory
             new SuccessResponseHandler(),
             new GetVersionHandler(),
         );
+    }
+
+    public function getHandler(CommandInterface $request): CommandHandlerInterface
+    {
+        foreach ($this->handlers as $handler) {
+            if ($handler->supports($request)) {
+                return $handler;
+            }
+        }
+
+        throw new \LogicException("Unsupported request: " . \get_class($request));
     }
 }

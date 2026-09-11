@@ -28,15 +28,15 @@ class SimpleActivity
 {
     #[ActivityMethod]
     public function echo(
-        string $input
+        string $input,
     ): string {
-        return strtoupper($input);
+        return \strtoupper($input);
     }
 
     #[ActivityMethod]
     public function prefix(
         string $prefix,
-        string $input
+        string $input,
     ): string {
         if ($input === 'error') {
             throw new \Error('activity error');
@@ -47,32 +47,32 @@ class SimpleActivity
 
     #[ActivityMethod]
     public function lower(
-        string $input
+        string $input,
     ): string {
-        return strtolower($input);
+        return \strtolower($input);
     }
 
     #[ActivityMethod]
     public function greet(
-        User $user
+        User $user,
     ): Message {
-        return new Message(sprintf("Hello %s <%s>", $user->name, $user->email));
+        return new Message(\sprintf("Hello %s <%s>", $user->name, $user->email));
     }
 
     #[ActivityMethod]
     public function slow(
-        string $input
+        string $input,
     ): string {
-        sleep(2);
+        \sleep(2);
 
-        return strtolower($input);
+        return \strtolower($input);
     }
 
     #[ActivityMethod]
     public function md5(
-        Bytes $input
+        Bytes $input,
     ): string {
-        return md5($input->getData());
+        return \md5($input->getData());
     }
 
     #[ActivityMethod]
@@ -82,19 +82,19 @@ class SimpleActivity
     }
 
     #[ActivityMethod]
-    public function external()
+    public function external(): void
     {
         Activity::doNotCompleteOnReturn();
-        file_put_contents(ExternalActivityFixturePaths::tokenPath(), Activity::getInfo()->taskToken);
-        file_put_contents(
+        \file_put_contents(ExternalActivityFixturePaths::tokenPath(), Activity::getInfo()->taskToken);
+        \file_put_contents(
             ExternalActivityFixturePaths::idPath(),
-            json_encode(
+            \json_encode(
                 [
                     'id' => Activity::getInfo()->workflowExecution->getID(),
                     'runId' => Activity::getInfo()->workflowExecution->getRunID(),
-                    'activityId' => Activity::getInfo()->id
-                ]
-            )
+                    'activityId' => Activity::getInfo()->id,
+                ],
+            ),
         );
     }
 
@@ -105,7 +105,7 @@ class SimpleActivity
     }
 
     #[ActivityMethod]
-    public function fail()
+    public function fail(): void
     {
         throw new \Error("failed activity");
     }
@@ -124,11 +124,11 @@ class SimpleActivity
 
     #[ActivityMethod('arrayOfObjects')]
     public function arrayOfObjects(
-        $user
+        $user,
     ): array {
         return [
-            new Message(sprintf("Hello %s", strtolower($user))),
-            new Message(sprintf("Hello %s", strtoupper($user))),
+            new Message(\sprintf("Hello %s", \strtolower($user))),
+            new Message(\sprintf("Hello %s", \strtoupper($user))),
         ];
     }
 
@@ -155,7 +155,5 @@ class SimpleActivity
      * @return PromiseInterface<null>
      */
     #[ActivityMethod]
-    public function empty(): void
-    {
-    }
+    public function empty(): void {}
 }

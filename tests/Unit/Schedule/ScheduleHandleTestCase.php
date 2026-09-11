@@ -57,7 +57,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('DeleteSchedule')
-            ->with($this->callback(fn (DeleteScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(DeleteScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new DeleteScheduleResponse());
 
         $scheduleHandle = $this->createScheduleHandle(
@@ -81,7 +81,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('PatchSchedule')
-            ->with($this->callback(fn (PatchScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(PatchScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new PatchScheduleResponse());
 
         $scheduleHandle = $this->createScheduleHandle(
@@ -107,7 +107,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('PatchSchedule')
-            ->with($this->callback(fn (PatchScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(PatchScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new PatchScheduleResponse());
 
         $scheduleHandle = $this->createScheduleHandle(
@@ -140,7 +140,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('PatchSchedule')
-            ->with($this->callback(fn (PatchScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(PatchScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new PatchScheduleResponse());
 
         $scheduleHandle = $this->createScheduleHandle(
@@ -176,7 +176,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('PatchSchedule')
-            ->with($this->callback(fn (PatchScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(PatchScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new PatchScheduleResponse());
         $scheduleHandle = $this->createScheduleHandle(
             client: $clientMock,
@@ -214,7 +214,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('UpdateSchedule')
-            ->with($this->callback(fn (UpdateScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(UpdateScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new UpdateScheduleResponse());
         $scheduleHandle = $this->createScheduleHandle(client: $clientMock);
 
@@ -241,11 +241,11 @@ class ScheduleHandleTestCase extends TestCase
             ->willReturn((new DescribeScheduleResponse()));
         $clientMock->expects($this->once())
             ->method('UpdateSchedule')
-            ->with($this->callback(fn (UpdateScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(UpdateScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn(new UpdateScheduleResponse());
         $scheduleHandle = $this->createScheduleHandle(client: $clientMock);
 
-        $scheduleHandle->update(function (ScheduleUpdateInput $input): ScheduleUpdate {
+        $scheduleHandle->update(static function (ScheduleUpdateInput $input): ScheduleUpdate {
             $schedule = Schedule::new();
             $sa = EncodedCollection::fromValues(['foo' => 'bar']);
             return ScheduleUpdate::new($schedule)
@@ -276,7 +276,7 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('DescribeSchedule')
-            ->with($this->callback(fn (DescribeScheduleRequest $request) => $testContext->request = $request or true))
+            ->with($this->callback(static fn(DescribeScheduleRequest $request) => $testContext->request = $request or true))
             ->willReturn((new DescribeScheduleResponse())->setConflictToken('test-conflict-token'));
         $scheduleHandle = $this->createScheduleHandle(
             client: $clientMock,
@@ -306,10 +306,11 @@ class ScheduleHandleTestCase extends TestCase
         $clientMock = $this->createMock(ServiceClientInterface::class);
         $clientMock->expects($this->once())
             ->method('ListScheduleMatchingTimes')
-            ->with($this->callback(fn (ListSchedulesRequest $request) => $testContext->request = $request or true))
-            ->willReturn((new ListScheduleMatchingTimesResponse())
-                ->setStartTime(array_map(static fn(\DateTimeInterface $dateTime) => (new \Google\Protobuf\Timestamp())
-                    ->setSeconds($dateTime->getTimestamp()), $resultList))
+            ->with($this->callback(static fn(ListSchedulesRequest $request) => $testContext->request = $request or true))
+            ->willReturn(
+                (new ListScheduleMatchingTimesResponse())
+                    ->setStartTime(\array_map(static fn(\DateTimeInterface $dateTime) => (new \Google\Protobuf\Timestamp())
+                        ->setSeconds($dateTime->getTimestamp()), $resultList)),
             );
         $scheduleHandle = $this->createScheduleHandle(
             client: $clientMock,

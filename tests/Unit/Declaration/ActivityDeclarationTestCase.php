@@ -25,16 +25,6 @@ use Temporal\Tests\Unit\Declaration\Fixture\ChildActivityMethods;
 class ActivityDeclarationTestCase extends AbstractDeclaration
 {
     /**
-     * @param array<ActivityPrototype> $prototypes
-     * @return array<string>
-     */
-    private function arrayToActivityNames(array $prototypes): array
-    {
-        return array_map(static fn(ActivityPrototype $proto) => $proto->getID(), $prototypes);
-    }
-
-    /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading activities (should return activity prototypes for all non-static public methods)")]
@@ -49,7 +39,6 @@ class ActivityDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
-     * @param ActivityReader $reader
      * @throws \ReflectionException
      */
     #[TestDox('')]
@@ -63,5 +52,14 @@ class ActivityDeclarationTestCase extends AbstractDeclaration
         $names = $this->arrayToActivityNames($prototypes);
 
         $this->assertSame(['activityMethodFromInterface', 'prefix.alternativeActivityName', 'activityMethod'], $names);
+    }
+
+    /**
+     * @param array<ActivityPrototype> $prototypes
+     * @return array<string>
+     */
+    private function arrayToActivityNames(array $prototypes): array
+    {
+        return \array_map(static fn(ActivityPrototype $proto) => $proto->getID(), $prototypes);
     }
 }

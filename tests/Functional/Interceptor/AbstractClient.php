@@ -23,10 +23,6 @@ use Temporal\Tests\Interceptor\InterceptorCallsCounter;
  */
 abstract class AbstractClient extends AbstractFunctional
 {
-    /**
-     * @param string $connection
-     * @return WorkflowClient
-     */
     protected function createClient(?string $connection = null): WorkflowClient
     {
         return new WorkflowClient(

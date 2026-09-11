@@ -17,6 +17,4 @@ use Temporal\Tests\Unit\AbstractUnit;
  * @group unit
  * @group protocol
  */
-abstract class AbstractProtocol extends AbstractUnit
-{
-}
+abstract class AbstractProtocol extends AbstractUnit {}

@@ -21,7 +21,7 @@ class BinaryWorkflow
 {
     #[WorkflowMethod(name: 'BinaryWorkflow')]
     public function handler(
-        Bytes $input
+        Bytes $input,
     ): iterable {
         $opts = ActivityOptions::new()->withStartToCloseTimeout(5);
 

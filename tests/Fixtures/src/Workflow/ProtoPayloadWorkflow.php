@@ -25,7 +25,7 @@ class ProtoPayloadWorkflow
     {
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5)
+            ActivityOptions::new()->withStartToCloseTimeout(5),
         );
 
         $e = new WorkflowExecution();
@@ -34,8 +34,8 @@ class ProtoPayloadWorkflow
 
         /** @var WorkflowExecution $e2 */
         $e2 = yield $simple->updateRunID($e);
-        assert($e2->getWorkflowId() === $e->getWorkflowId());
-        assert($e2->getRunId() === 'updated');
+        \assert($e2->getWorkflowId() === $e->getWorkflowId());
+        \assert($e2->getRunId() === 'updated');
 
         return $e2;
     }

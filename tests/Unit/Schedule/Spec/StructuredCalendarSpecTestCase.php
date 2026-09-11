@@ -45,11 +45,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedSecond(): void
     {
         $init = StructuredCalendarSpec::new()->withSeconds(
-            $r1 = Range::new(1, 60, 5)
+            $r1 = Range::new(1, 60, 5),
         );
 
         $new = $init->withAddedSecond(
-            $r2 = Range::new(1, 60, 6)
+            $r2 = Range::new(1, 60, 6),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -93,11 +93,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedMinute(): void
     {
         $init = StructuredCalendarSpec::new()->withMinutes(
-            $r1 = Range::new(1, 60, 5)
+            $r1 = Range::new(1, 60, 5),
         );
 
         $new = $init->withAddedMinute(
-            $r2 = Range::new(1, 60, 6)
+            $r2 = Range::new(1, 60, 6),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -141,11 +141,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedHour(): void
     {
         $init = StructuredCalendarSpec::new()->withHours(
-            $r1 = Range::new(1, 24, 3)
+            $r1 = Range::new(1, 24, 3),
         );
 
         $new = $init->withAddedHour(
-            $r2 = Range::new(1, 24, 2)
+            $r2 = Range::new(1, 24, 2),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -189,11 +189,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedDayOfMonth(): void
     {
         $init = StructuredCalendarSpec::new()->withDaysOfMonth(
-            $r1 = Range::new(1, 31, 3)
+            $r1 = Range::new(1, 31, 3),
         );
 
         $new = $init->withAddedDayOfMonth(
-            $r2 = Range::new(1, 31, 2)
+            $r2 = Range::new(1, 31, 2),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -237,11 +237,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedMonth(): void
     {
         $init = StructuredCalendarSpec::new()->withMonths(
-            $r1 = Range::new(1, 12, 3)
+            $r1 = Range::new(1, 12, 3),
         );
 
         $new = $init->withAddedMonth(
-            $r2 = Range::new(1, 12, 2)
+            $r2 = Range::new(1, 12, 2),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -285,11 +285,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedDayOfWeek(): void
     {
         $init = StructuredCalendarSpec::new()->withDaysOfWeek(
-            $r1 = Range::new(1, 7, 3)
+            $r1 = Range::new(1, 7, 3),
         );
 
         $new = $init->withAddedDayOfWeek(
-            $r2 = Range::new(1, 7, 2)
+            $r2 = Range::new(1, 7, 2),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');
@@ -333,11 +333,11 @@ class StructuredCalendarSpecTestCase extends TestCase
     public function testWithAddedYear(): void
     {
         $init = StructuredCalendarSpec::new()->withYears(
-            $r1 = Range::new(2021, 2042, 3)
+            $r1 = Range::new(2021, 2042, 3),
         );
 
         $new = $init->withAddedYear(
-            $r2 = Range::new(2021, 2042, 2)
+            $r2 = Range::new(2021, 2042, 2),
         );
 
         $this->assertNotSame($init, $new, 'immutable method clones object');

@@ -31,8 +31,8 @@ class ActivityNamedArgumentsWorkflow
             ActivityOptions::new()
                 ->withStartToCloseTimeout(5)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(2)
-                )
+                    RetryOptions::new()->withMaximumAttempts(2),
+                ),
         );
 
         $oneParamRes = yield $activity->namedArguments(

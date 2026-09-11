@@ -25,38 +25,34 @@ use Temporal\Workflow\WorkflowExecution;
  */
 abstract class AbstractClient extends AbstractFunctional
 {
-    /**
-     * @param string $connection
-     * @return WorkflowClient
-     */
     protected function createClient(?string $connection = null): WorkflowClient
     {
         return new WorkflowClient(
-            ServiceClient::create($connection ?? TemporalServer::address())
+            ServiceClient::create($connection ?? TemporalServer::address()),
         );
     }
 
     protected function assertHistoryContainsActivity(
         WorkflowClient $client,
         WorkflowExecution $e,
-        string $activity
-    ) {
+        string $activity,
+    ): void {
         $this->assertHistoryContains(
             $client,
             $e,
-            function (HistoryEvent $e) use ($activity) {
+            static function (HistoryEvent $e) use ($activity) {
                 return (
                     $e->getEventType() === EventType::EVENT_TYPE_ACTIVITY_TASK_SCHEDULED
                     && $e->getActivityTaskScheduledEventAttributes()->getActivityType()->getName() == $activity
                 );
-            }
+            },
         );
     }
 
     protected function assertHistoryContains(
         WorkflowClient $client,
         WorkflowExecution $e,
-        callable $checker
+        callable $checker,
     ) {
         $arg = new GetWorkflowExecutionHistoryRequest();
         $arg->setNamespace('default');

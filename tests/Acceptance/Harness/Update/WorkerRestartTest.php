@@ -14,7 +14,6 @@ use Temporal\Activity\ActivityOptions;
 use Temporal\Client\WorkflowStubInterface;
 use Temporal\Tests\Acceptance\App\Attribute\Stub;
 use Temporal\Tests\Acceptance\App\Runtime\RRStarter;
-use Temporal\Tests\Acceptance\App\Runtime\TemporalStarter;
 use Temporal\Tests\Acceptance\App\TestCase;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowInterface;
@@ -75,7 +74,7 @@ class FeatureWorkflow
     {
         yield Workflow::executeActivity(
             'blocks',
-            options: ActivityOptions::new()->withStartToCloseTimeout(10)
+            options: ActivityOptions::new()->withStartToCloseTimeout(10),
         );
         $this->done = true;
     }

@@ -7,7 +7,6 @@ namespace Temporal\Tests\Unit\Common\EnvConfig\Client;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Temporal\Common\EnvConfig\Client\ConfigCodec;
 use Temporal\Common\EnvConfig\Client\ConfigEnv;
 use Temporal\Common\EnvConfig\Client\ConfigProfile;
 use Temporal\Common\EnvConfig\Exception\CodecNotSupportedException;

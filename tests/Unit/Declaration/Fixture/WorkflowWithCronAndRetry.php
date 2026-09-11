@@ -16,7 +16,9 @@ use Temporal\Common\MethodRetry;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 class WorkflowWithCronAndRetry
 {
@@ -26,7 +28,5 @@ class WorkflowWithCronAndRetry
      * @MethodRetry(initialInterval="42µs")
      */
     #[WorkflowMethod, CronSchedule('@monthly'), MethodRetry('42µs')]
-    public function handler(): void
-    {
-    }
+    public function handler(): void {}
 }

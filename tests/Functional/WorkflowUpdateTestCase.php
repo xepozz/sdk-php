@@ -178,7 +178,7 @@ class WorkflowUpdateTestCase extends AbstractClient
 
         $this->assertGreaterThan(1, $endedAt - $startedAt, 'Await is working');
         $this->assertLessThan(3, $endedAt - $startedAt);
-        $this->assertSame(['key' => 'fallback'], (array)$result);
+        $this->assertSame(['key' => 'fallback'], (array) $result);
         $this->assertSame('fallback', $updated);
     }
 
@@ -187,8 +187,10 @@ class WorkflowUpdateTestCase extends AbstractClient
      */
     private function createUpdateWorkflow(WorkflowClient $client)
     {
-        return $client->newWorkflowStub(UpdateWorkflow::class, WorkflowOptions::new()
-            ->withWorkflowRunTimeout('10 seconds')
+        return $client->newWorkflowStub(
+            UpdateWorkflow::class,
+            WorkflowOptions::new()
+                ->withWorkflowRunTimeout('10 seconds'),
         );
     }
 
@@ -197,15 +199,19 @@ class WorkflowUpdateTestCase extends AbstractClient
      */
     private function createAwaitsUpdateWorkflow(WorkflowClient $client)
     {
-        return $client->newWorkflowStub(AwaitsUpdateWorkflow::class, WorkflowOptions::new()
-            ->withWorkflowRunTimeout('10 seconds')
+        return $client->newWorkflowStub(
+            AwaitsUpdateWorkflow::class,
+            WorkflowOptions::new()
+                ->withWorkflowRunTimeout('10 seconds'),
         );
     }
 
     private function createAwaitsUpdateUntypedStub(WorkflowClient $client): WorkflowStubInterface
     {
-        return $client->newWorkflowStub(AwaitsUpdateWorkflow::class, WorkflowOptions::new()
-            ->withWorkflowRunTimeout('10 seconds')
+        return $client->newWorkflowStub(
+            AwaitsUpdateWorkflow::class,
+            WorkflowOptions::new()
+                ->withWorkflowRunTimeout('10 seconds'),
         )->__getUntypedStub();
     }
 }

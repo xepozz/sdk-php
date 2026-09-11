@@ -18,7 +18,8 @@ use Temporal\Workflow\WorkflowMethod;
 class YieldScalarsWorkflow
 {
     #[WorkflowMethod(name: 'YieldScalarsWorkflow')]
-    public function handler(array $toYield): iterable {
+    public function handler(array $toYield): iterable
+    {
         $result = [];
 
         foreach ($toYield as $value) {

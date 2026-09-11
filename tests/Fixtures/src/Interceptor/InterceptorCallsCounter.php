@@ -25,7 +25,6 @@ use Temporal\Interceptor\WorkflowClient\UpdateWithStartInput;
 use Temporal\Interceptor\WorkflowClient\UpdateWithStartOutput;
 use Temporal\Interceptor\WorkflowClientCallsInterceptor;
 use Temporal\Interceptor\WorkflowInbound\SignalInput;
-use Temporal\Interceptor\WorkflowInbound\UpdateInput;
 use Temporal\Interceptor\WorkflowInbound\WorkflowInput;
 use Temporal\Interceptor\WorkflowInboundCallsInterceptor;
 use Temporal\Interceptor\WorkflowOutboundRequestInterceptor;
@@ -50,14 +49,6 @@ final class InterceptorCallsCounter implements
     use ActivityInboundInterceptorTrait;
     use WorkflowInboundCallsInterceptorTrait;
     use WorkflowClientCallsInterceptorTrait;
-
-    private function increment(HeaderInterface $header, string $key): HeaderInterface
-    {
-        $value = $header->getValue($key);
-
-        $value = $value === null ? 1 : (int)$value + 1;
-        return $header->withValue($key, (string)$value);
-    }
 
     public function handleOutboundRequest(RequestInterface $request, callable $next): PromiseInterface
     {
@@ -105,5 +96,13 @@ final class InterceptorCallsCounter implements
                 ),
             ),
         );
+    }
+
+    private function increment(HeaderInterface $header, string $key): HeaderInterface
+    {
+        $value = $header->getValue($key);
+
+        $value = $value === null ? 1 : (int) $value + 1;
+        return $header->withValue($key, (string) $value);
     }
 }

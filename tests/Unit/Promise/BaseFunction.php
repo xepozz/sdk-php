@@ -48,10 +48,10 @@ abstract class BaseFunction extends TestCase
 
     protected function createCallableMock()
     {
-        return $this->getMockBuilder('stdClass')->addMethods(array('__invoke'))->getMock();
+        return $this->getMockBuilder('stdClass')->addMethods(['__invoke'])->getMock();
     }
 
-    protected function setExpectedException($exception, $exceptionMessage = '', $exceptionCode = null)
+    protected function setExpectedException($exception, $exceptionMessage = '', $exceptionCode = null): void
     {
         $this->expectException($exception);
         if ($exceptionMessage !== '') {

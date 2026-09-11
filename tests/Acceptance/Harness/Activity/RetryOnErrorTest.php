@@ -71,7 +71,7 @@ class FeatureWorkflow
                         # Do not increase retry backoff each time
                         ->withBackoffCoefficient(1)
                         # 5 total maximum attempts
-                        ->withMaximumAttempts(5)
+                        ->withMaximumAttempts(5),
                 ),
         )->alwaysFailActivity();
     }

@@ -15,6 +15,27 @@ use Temporal\DataConverter\EncodedCollection;
 #[CoversClass(\Temporal\Client\Schedule\ScheduleOptions::class)]
 class ScheduleOptionsTestCase extends TestCase
 {
+    public static function provideEncodedValues(): iterable
+    {
+        yield 'array' => [['foo' => 'bar'], ['foo' => 'bar']];
+        yield 'generator' => [(static fn() => yield from ['foo' => 'bar'])(), ['foo' => 'bar']];
+        yield 'encoded collection' => [EncodedCollection::fromValues(['foo' => 'bar']), ['foo' => 'bar']];
+        yield 'change array' => [['foo' => 'bar'], ['foo' => 'bar'], ['baz' => 'qux'], ['baz' => 'qux']];
+        yield 'change generator' => [
+            (static fn() => yield from ['foo' => 'bar'])(),
+            ['foo' => 'bar'],
+            (static fn() => yield from ['baz' => 'qux'])(),
+            ['baz' => 'qux'],
+        ];
+        yield 'change encoded collection' => [
+            EncodedCollection::fromValues(['foo' => 'bar']),
+            ['foo' => 'bar'],
+            EncodedCollection::fromValues(['baz' => 'qux']),
+            ['baz' => 'qux'],
+        ];
+        yield 'clear' => [[], [], ['foo' => 'bar'], ['foo' => 'bar']];
+    }
+
     public function testWithNamespace(): void
     {
         $init = ScheduleOptions::new();
@@ -68,27 +89,6 @@ class ScheduleOptionsTestCase extends TestCase
         $this->assertSame([], $init->backfills, 'default value was not changed');
         $this->assertSame([$values[0]], $new0->backfills);
         $this->assertSame($values, $new1->backfills);
-    }
-
-    public static function provideEncodedValues(): iterable
-    {
-        yield 'array' => [['foo' => 'bar'], ['foo' => 'bar']];
-        yield 'generator' => [(static fn() => yield from ['foo' => 'bar'])(), ['foo' => 'bar']];
-        yield 'encoded collection' => [EncodedCollection::fromValues(['foo' => 'bar']), ['foo' => 'bar']];
-        yield 'change array' => [['foo' => 'bar'], ['foo' => 'bar'], ['baz' => 'qux'], ['baz' => 'qux']];
-        yield 'change generator' => [
-            (static fn() => yield from ['foo' => 'bar'])(),
-            ['foo' => 'bar'],
-            (static fn() => yield from ['baz' => 'qux'])(),
-            ['baz' => 'qux'],
-        ];
-        yield 'change encoded collection' => [
-            EncodedCollection::fromValues(['foo' => 'bar']),
-            ['foo' => 'bar'],
-            EncodedCollection::fromValues(['baz' => 'qux']),
-            ['baz' => 'qux'],
-        ];
-        yield 'clear' => [[], [], ['foo' => 'bar'], ['foo' => 'bar']];
     }
 
     #[DataProvider('provideEncodedValues')]

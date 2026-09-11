@@ -58,7 +58,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowIdReusePolicy(
-            IdReusePolicy::POLICY_ALLOW_DUPLICATE
+            IdReusePolicy::POLICY_ALLOW_DUPLICATE,
         ));
     }
 
@@ -67,7 +67,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withWorkflowIdReusePolicy(
-            IdReusePolicy::AllowDuplicateFailedOnly
+            IdReusePolicy::AllowDuplicateFailedOnly,
         ));
         $this->assertSame(IdReusePolicy::AllowDuplicateFailedOnly->value, $dto->workflowIdReusePolicy);
     }
@@ -77,7 +77,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withParentClosePolicy(
-            ParentClosePolicy::POLICY_ABANDON
+            ParentClosePolicy::POLICY_ABANDON,
         ));
     }
 
@@ -86,7 +86,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withParentClosePolicy(
-            ParentClosePolicy::Terminate
+            ParentClosePolicy::Terminate,
         ));
         $this->assertSame(ParentClosePolicy::Terminate->value, $dto->parentClosePolicy);
     }
@@ -96,7 +96,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withChildWorkflowCancellationType(
-            ChildWorkflowCancellationType::WAIT_CANCELLATION_COMPLETED
+            ChildWorkflowCancellationType::WAIT_CANCELLATION_COMPLETED,
         ));
     }
 
@@ -105,7 +105,7 @@ class ChildWorkflowOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ChildWorkflowOptions();
 
         $this->assertNotSame($dto, $dto->withChildWorkflowCancellationType(
-            ChildWorkflowCancellationType::WaitCancellationCompleted
+            ChildWorkflowCancellationType::WaitCancellationCompleted,
         ));
         $this->assertSame(ChildWorkflowCancellationType::TryCancel->value, $dto->cancellationType);
     }

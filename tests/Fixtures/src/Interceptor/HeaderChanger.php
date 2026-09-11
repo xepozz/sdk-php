@@ -15,7 +15,6 @@ use React\Promise\PromiseInterface;
 use Temporal\Interceptor\Header;
 use Temporal\Interceptor\Trait\WorkflowClientCallsInterceptorTrait;
 use Temporal\Interceptor\Trait\WorkflowInboundCallsInterceptorTrait;
-use Temporal\Interceptor\WorkflowClient\StartInput;
 use Temporal\Interceptor\WorkflowClientCallsInterceptor;
 use Temporal\Interceptor\WorkflowInbound\WorkflowInput;
 use Temporal\Interceptor\WorkflowInboundCallsInterceptor;
@@ -75,10 +74,8 @@ final class HeaderChanger implements
     }
 
     /**
-     * @param ExecuteActivity $request
      * @param callable(ExecuteActivity): PromiseInterface $next
      *
-     * @return PromiseInterface
      */
     protected function executeActivity(ExecuteActivity $request, callable $next): PromiseInterface
     {

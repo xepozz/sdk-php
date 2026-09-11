@@ -33,7 +33,7 @@ class CancelledWithCompensationWorkflow
     {
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5)
+            ActivityOptions::new()->withStartToCloseTimeout(5),
         );
 
         // waits for 2 seconds
@@ -65,7 +65,7 @@ class CancelledWithCompensationWorkflow
 
                     $second = yield $simple->echo('rollback');
 
-                    $this->status[] = sprintf("RESULT (%s)", $second);
+                    $this->status[] = \sprintf("RESULT (%s)", $second);
 
                     if ($second !== 'ROLLBACK') {
                         $this->status[] = 'FAIL rollback';
@@ -74,7 +74,7 @@ class CancelledWithCompensationWorkflow
                     $this->status[] = 'DONE rollback';
 
                     return 'OK';
-                }
+                },
             );
 
             $this->status[] = 'WAIT ROLLBACK';

@@ -25,7 +25,7 @@ class ActivityReturnTypeWorkflow
         // typed stub
         $act = Workflow::newActivityStub(
             SampleActivityInterface::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5)
+            ActivityOptions::new()->withStartToCloseTimeout(5),
         );
 
         $value = yield $act->multiply(10);

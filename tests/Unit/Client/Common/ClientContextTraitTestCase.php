@@ -113,6 +113,7 @@ class ClientContextTraitTestCase extends TestCase
 
         return new class($client) {
             use ClientContextTrait;
+
             public function __construct(ServiceClientInterface $client)
             {
                 $this->client = $client;

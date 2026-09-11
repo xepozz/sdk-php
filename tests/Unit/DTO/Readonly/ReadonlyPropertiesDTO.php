@@ -13,14 +13,13 @@ namespace Temporal\Tests\Unit\DTO\Readonly;
 
 class ReadonlyPropertiesDTO
 {
-    readonly public string $propertiesString;
+    public readonly string $propertiesString;
 
     public function __construct(
-        readonly public string $promotedString,
-        readonly public string $secondPromotedString,
-        string $propertiesString
-    )
-    {
+        public readonly string $promotedString,
+        public readonly string $secondPromotedString,
+        string $propertiesString,
+    ) {
         $this->propertiesString = $propertiesString;
     }
 }

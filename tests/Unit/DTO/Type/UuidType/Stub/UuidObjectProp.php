@@ -17,6 +17,5 @@ final class UuidObjectProp
 {
     public function __construct(
         public UuidInterface $interface,
-    ) {
-    }
+    ) {}
 }

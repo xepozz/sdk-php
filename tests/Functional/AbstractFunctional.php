@@ -16,6 +16,4 @@ use Temporal\Tests\TestCase;
 /**
  * @group functional
  */
-abstract class AbstractFunctional extends TestCase
-{
-}
+abstract class AbstractFunctional extends TestCase {}

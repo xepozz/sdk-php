@@ -25,6 +25,9 @@ final class FatalHandlerTestCase extends TestCase
 {
     use TranscriptTestSupport;
 
+    /** @var list<string> */
+    private array $lastFixtureOutput = [];
+
     public function testUserErrorIsRecordedAsFatalViaShutdownFunction(): void
     {
         $logFile = $this->directory . '/fatal.log';
@@ -94,9 +97,6 @@ final class FatalHandlerTestCase extends TestCase
             {$body}
             PHP;
     }
-
-    /** @var list<string> */
-    private array $lastFixtureOutput = [];
 
     private function executeFixture(string $script): void
     {

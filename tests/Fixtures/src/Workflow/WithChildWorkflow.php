@@ -19,7 +19,7 @@ class WithChildWorkflow
 {
     #[WorkflowMethod(name: 'WithChildWorkflow')]
     public function handler(
-        string $input
+        string $input,
     ): iterable {
         $result = yield Workflow::executeChildWorkflow(
             'SimpleWorkflow',

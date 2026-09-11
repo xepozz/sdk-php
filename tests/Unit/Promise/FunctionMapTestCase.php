@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Promise;
 
-use Exception;
 use React\Promise\Deferred;
 use Temporal\Promise;
 
@@ -25,7 +24,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [1, 2, 3],
-            $this->mapper()
+            $this->mapper(),
         )->then($mock);
     }
 
@@ -39,7 +38,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [Promise::resolve(1), Promise::resolve(2), Promise::resolve(3)],
-            $this->mapper()
+            $this->mapper(),
         )->then($mock);
     }
 
@@ -53,7 +52,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [1, Promise::resolve(2), 3],
-            $this->mapper()
+            $this->mapper(),
         )->then($mock);
     }
 
@@ -67,7 +66,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [1, 2, 3],
-            $this->promiseMapper()
+            $this->promiseMapper(),
         )->then($mock);
     }
 
@@ -83,7 +82,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [Promise::resolve(1), $deferred->promise(), Promise::resolve(3)],
-            $this->mapper()
+            $this->mapper(),
         )->then($mock);
 
         $deferred->resolve(2);
@@ -91,7 +90,7 @@ final class FunctionMapTestCase extends BaseFunction
 
     public function testRejectWhenInputContainsRejection(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->once())
@@ -100,13 +99,13 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [Promise::resolve(1), Promise::reject($e), Promise::resolve(3)],
-            $this->mapper()
+            $this->mapper(),
         )->then($this->expectCallableNever(), $mock);
     }
 
     public function testRejectWhenInputPromiseRejects(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->once())
@@ -115,7 +114,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [Promise::reject($e)],
-            $this->mapper()
+            $this->mapper(),
         )->then($this->expectCallableNever(), $mock);
     }
 
@@ -128,7 +127,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [$mock],
-            $this->mapper()
+            $this->mapper(),
         )->cancel();
     }
 
@@ -148,7 +147,7 @@ final class FunctionMapTestCase extends BaseFunction
 
         Promise::map(
             [$mock1, $mock2],
-            $this->mapper()
+            $this->mapper(),
         )->cancel();
     }
 

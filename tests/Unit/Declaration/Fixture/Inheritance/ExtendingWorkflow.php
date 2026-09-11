@@ -13,8 +13,8 @@ namespace Temporal\Tests\Unit\Declaration\Fixture\Inheritance;
 
 use Temporal\Workflow\WorkflowInterface;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
-class ExtendingWorkflow extends BaseWorkflowWithHandler
-{
-}
+class ExtendingWorkflow extends BaseWorkflowWithHandler {}

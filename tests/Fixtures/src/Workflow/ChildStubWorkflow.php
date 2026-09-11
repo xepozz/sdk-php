@@ -19,7 +19,7 @@ class ChildStubWorkflow
 {
     #[WorkflowMethod(name: 'ChildStubWorkflow')]
     public function handler(
-        string $input
+        string $input,
     ) {
         // typed stub
         $simple = Workflow::newChildWorkflowStub(SimpleWorkflow::class);
@@ -32,7 +32,7 @@ class ChildStubWorkflow
         $result[] = yield $untyped->execute(['untyped']);
 
         $execution = yield $untyped->getExecution();
-        assert($execution instanceof Workflow\WorkflowExecution);
+        \assert($execution instanceof Workflow\WorkflowExecution);
 
         return $result;
     }

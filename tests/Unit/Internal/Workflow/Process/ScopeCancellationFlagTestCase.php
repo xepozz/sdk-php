@@ -15,16 +15,6 @@ final class ScopeCancellationFlagTestCase extends TestCase
 {
     private bool $flagBackup;
 
-    protected function setUp(): void
-    {
-        $this->flagBackup = FeatureFlags::$propagateCancellationToNewScopes;
-    }
-
-    protected function tearDown(): void
-    {
-        FeatureFlags::$propagateCancellationToNewScopes = $this->flagBackup;
-    }
-
     #[Test]
     public function onCancelHandlerRegisteredAfterCancelIsMissedWhenFlagDisabled(): void
     {
@@ -62,6 +52,16 @@ final class ScopeCancellationFlagTestCase extends TestCase
         });
 
         self::assertSame($reason, $received, 'With the flag enabled the late onCancel handler must fire with the cancel reason');
+    }
+
+    protected function setUp(): void
+    {
+        $this->flagBackup = FeatureFlags::$propagateCancellationToNewScopes;
+    }
+
+    protected function tearDown(): void
+    {
+        FeatureFlags::$propagateCancellationToNewScopes = $this->flagBackup;
     }
 }
 

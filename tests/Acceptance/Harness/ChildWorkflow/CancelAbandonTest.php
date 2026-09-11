@@ -158,7 +158,7 @@ class MainScopeWorkflow
                 ? 'cancelled'
                 : throw $failure;
         } finally {
-            yield Workflow::asyncDetached(function () {
+            yield Workflow::asyncDetached(static function () {
                 # We shouldn't complete the Workflow immediately:
                 # all the commands from the tick must be sent for testing purposes.
                 yield Workflow::timer(1);
@@ -200,7 +200,7 @@ class InnerScopeCancelWorkflow
                 ? 'cancelled'
                 : throw $failure;
         } finally {
-            yield Workflow::asyncDetached(function () {
+            yield Workflow::asyncDetached(static function () {
                 # We shouldn't complete the Workflow immediately:
                 # all the commands from the tick must be sent for testing purposes.
                 yield Workflow::timer(1);

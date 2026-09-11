@@ -9,7 +9,7 @@ use Temporal\Worker\ServiceCredentials;
 
 class ServiceCredentialsTestCase extends TestCase
 {
-    public function testWithApiKeyImmutability()
+    public function testWithApiKeyImmutability(): void
     {
         $dto = ServiceCredentials::create();
 

@@ -25,6 +25,7 @@ use Temporal\Common\Logger\StderrLogger;
 use Temporal\Internal\Client\PayloadSizeChecker;
 use Temporal\Client\GRPC\ContextInterface;
 use Temporal\Client\GRPC\ServiceClient;
+use Temporal\Client\GRPC\StatusCode;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\Client\WorkflowClient;
 use Temporal\Interceptor\GrpcClientInterceptor;
@@ -105,20 +106,6 @@ final class PayloadLimitsTestCase extends TestCase
         self::assertCount(1, $this->records);
     }
 
-    private function passThroughInterceptor(): GrpcClientInterceptor
-    {
-        return new class implements GrpcClientInterceptor {
-            public function interceptCall(
-                string $method,
-                object $arg,
-                ContextInterface $ctx,
-                callable $next,
-            ): object {
-                return $next($method, $arg, $ctx);
-            }
-        };
-    }
-
     public function testWorkflowClientEnablesWarnings(): void
     {
         $client = new WorkflowClient(
@@ -176,19 +163,17 @@ final class PayloadLimitsTestCase extends TestCase
         self::assertNotNull($this->checkerOf($serviceClient));
     }
 
-    private function checkerOf(object $serviceClient): ?PayloadSizeChecker
+    public function testRetriedCallIsMeasuredOnce(): void
     {
-        return $this->propertyOf($serviceClient, 'payloadSizeChecker');
-    }
-
-    private function propertyOf(object $object, string $property): mixed
-    {
-        $reflection = new \ReflectionProperty(
-            $object instanceof PayloadSizeChecker ? PayloadSizeChecker::class : BaseClient::class,
-            $property,
+        // The check runs before the call, so the retries of one RPC do not multiply the warnings
+        $client = $this->createClient(failures: 2)->withPayloadLimits(
+            new PayloadLimitOptions(1024, 1024),
+            $this->createLogger(),
         );
 
-        return $reflection->getValue($object);
+        $client->testCall($this->request(2000));
+
+        self::assertCount(1, $this->records);
     }
 
     public function testClientIsImmutable(): void
@@ -210,6 +195,35 @@ final class PayloadLimitsTestCase extends TestCase
         parent::setUp();
     }
 
+    private function passThroughInterceptor(): GrpcClientInterceptor
+    {
+        return new class implements GrpcClientInterceptor {
+            public function interceptCall(
+                string $method,
+                object $arg,
+                ContextInterface $ctx,
+                callable $next,
+            ): object {
+                return $next($method, $arg, $ctx);
+            }
+        };
+    }
+
+    private function checkerOf(object $serviceClient): ?PayloadSizeChecker
+    {
+        return $this->propertyOf($serviceClient, 'payloadSizeChecker');
+    }
+
+    private function propertyOf(object $object, string $property): mixed
+    {
+        $reflection = new \ReflectionProperty(
+            $object instanceof PayloadSizeChecker ? PayloadSizeChecker::class : BaseClient::class,
+            $property,
+        );
+
+        return $reflection->getValue($object);
+    }
+
     private function request(int $size): StartWorkflowExecutionRequest
     {
         return (new StartWorkflowExecutionRequest())->setInput(
@@ -229,10 +243,13 @@ final class PayloadLimitsTestCase extends TestCase
         };
     }
 
-    private function createClient(): ServiceClient
+    /**
+     * @param int<0, max> $failures Number of retryable failures before the call succeeds.
+     */
+    private function createClient(int $failures = 0): ServiceClient
     {
-        $stub = static fn() => new class extends WorkflowServiceClient {
-            public function __construct() {}
+        $stub = static fn() => new class($failures) extends WorkflowServiceClient {
+            public function __construct(private int $failures = 0) {}
 
             public function getConnectivityState($try_to_connect = false): int
             {
@@ -244,10 +261,14 @@ final class PayloadLimitsTestCase extends TestCase
              */
             public function testCall(object $arg, array $metadata = [], array $options = []): object
             {
-                return new class {
+                $code = $this->failures-- > 0 ? StatusCode::UNAVAILABLE : 0;
+
+                return new class($code) {
+                    public function __construct(private int $code) {}
+
                     public function wait(): array
                     {
-                        return [(object) ['result' => true], (object) ['code' => 0]];
+                        return [(object) ['result' => true], (object) ['code' => $this->code, 'details' => '']];
                     }
                 };
             }

@@ -308,7 +308,7 @@ class TestWorkflow
         $this->awaits[$name] = $value;
     }
 
-    #[Workflow\SignalMethod()]
+    #[Workflow\SignalMethod]
     public function exit(): void
     {
         $this->exit = true;

@@ -33,7 +33,7 @@ final class InterceptorsTimeSkippingTestCase extends AbstractClient
                 ->withWorkflowExecutionTimeout(CarbonInterval::seconds(5)),
         );
 
-        $result = (array)$workflow->handler();
+        $result = (array) $workflow->handler();
 
         // Workflow header
         $this->assertEquals([
@@ -41,7 +41,7 @@ final class InterceptorsTimeSkippingTestCase extends AbstractClient
             'start' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::execute() */
             'execute' => '1',
-        ], (array)$result[0]);
+        ], (array) $result[0]);
     }
 
     public function testContinueAsNew(): void
@@ -53,7 +53,7 @@ final class InterceptorsTimeSkippingTestCase extends AbstractClient
                 ->withWorkflowExecutionTimeout(CarbonInterval::seconds(5)),
         );
 
-        $result = (array)$workflow->handler();
+        $result = (array) $workflow->handler();
 
         // Workflow header
         $this->assertEquals([
@@ -62,6 +62,6 @@ final class InterceptorsTimeSkippingTestCase extends AbstractClient
             'ContinueAsNew' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::execute() */
             'execute' => '2',
-        ], (array)$result[0]);
+        ], (array) $result[0]);
     }
 }

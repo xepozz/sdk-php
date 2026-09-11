@@ -14,14 +14,6 @@ final class SearchAttributeMockerTestCase extends TestCase
     private InMemorySearchAttributeInvocationCache $cache;
     private SearchAttributeMocker $mocker;
 
-    protected function setUp(): void
-    {
-        $this->cache = new InMemorySearchAttributeInvocationCache();
-        $this->mocker = new SearchAttributeMocker($this->cache);
-
-        parent::setUp();
-    }
-
     public function testAssertUpsertedAndValue(): void
     {
         $this->cache->recordUpsert('CustomKeyword', ['operation' => 'set', 'type' => 'keyword', 'value' => 'CustomValue']);
@@ -104,5 +96,13 @@ final class SearchAttributeMockerTestCase extends TestCase
 
         self::assertFalse($this->mocker->wasUpserted('CustomKeyword'));
         self::assertSame([], $this->mocker->getUpsertedAttributes());
+    }
+
+    protected function setUp(): void
+    {
+        $this->cache = new InMemorySearchAttributeInvocationCache();
+        $this->mocker = new SearchAttributeMocker($this->cache);
+
+        parent::setUp();
     }
 }

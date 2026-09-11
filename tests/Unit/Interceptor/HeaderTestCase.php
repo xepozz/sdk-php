@@ -23,6 +23,29 @@ use Temporal\Tests\Unit\AbstractUnit;
  */
 class HeaderTestCase extends AbstractUnit
 {
+    public static function fromValuesProvider(): iterable
+    {
+        yield [
+            ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'foo'],
+            ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'foo'],
+        ];
+
+        yield [
+            [1 => 'bar', 2 => 4, 3 => 0.5],
+            [1 => 'bar', 2 => 4, 3 => 0.5],
+        ];
+
+        yield [
+            ['foo' => null, 'bar' => $x = new class implements \Stringable {
+                public function __toString(): string
+                {
+                    return 'baz';
+                }
+            }, 'baz' => false],
+            ['foo' => null, 'bar' => $x, 'baz' => false],
+        ];
+    }
+
     public function testToHeaderFromValuesWithoutConverterException(): void
     {
         $header = Header::empty()->withValue('foo', 'bar');
@@ -128,29 +151,6 @@ class HeaderTestCase extends AbstractUnit
         $collection = $header->toHeader()->getFields();
         $this->assertCount(1, $collection);
         $this->assertSame('bar', $converter->fromPayload($collection->offsetGet('foo'), null));
-    }
-
-    public static function fromValuesProvider(): iterable
-    {
-        yield [
-            ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'foo'],
-            ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'foo'],
-        ];
-
-        yield [
-            [1 => 'bar', 2 => 4, 3 => 0.5],
-            [1 => 'bar', 2 => 4, 3 => 0.5],
-        ];
-
-        yield [
-            ['foo' => null, 'bar' => $x = new class implements \Stringable {
-                public function __toString(): string
-                {
-                    return 'baz';
-                }
-            }, 'baz' => false],
-            ['foo' => null, 'bar' => $x, 'baz' => false],
-        ];
     }
 
     private function getDataConverter(): DataConverterInterface

@@ -36,7 +36,7 @@ class ReadonlyPropertiesTestCase extends AbstractDTOMarshalling
         $marshaled = $this->marshal($dto);
         $unmarshaled = $this->unmarshal(
             $marshaled,
-            $reflection->newInstanceWithoutConstructor()
+            $reflection->newInstanceWithoutConstructor(),
         );
 
         self::assertEquals($dto, $unmarshaled);

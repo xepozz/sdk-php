@@ -22,7 +22,7 @@ class ExternalWorkflowTestCase extends AbstractClient
 {
     use WithoutTimeSkipping;
 
-    public function testSignalWorkflowExecution()
+    public function testSignalWorkflowExecution(): void
     {
         $client = $this->createClient();
 
@@ -38,7 +38,7 @@ class ExternalWorkflowTestCase extends AbstractClient
         $this->assertEquals(['LOOP'], $result);
     }
 
-    public function testSignalWorkflowExecutionByIDOnly()
+    public function testSignalWorkflowExecutionByIDOnly(): void
     {
         $client = $this->createClient();
 
@@ -54,7 +54,7 @@ class ExternalWorkflowTestCase extends AbstractClient
         $this->assertEquals(['LOOP'], $result);
     }
 
-    public function testRequestCancelExternalWorkflow()
+    public function testRequestCancelExternalWorkflow(): void
     {
         $client = $this->createClient();
 
@@ -73,7 +73,7 @@ class ExternalWorkflowTestCase extends AbstractClient
         }
     }
 
-    public function testRequestCancelExternalWorkflowWithoutRunId()
+    public function testRequestCancelExternalWorkflowWithoutRunId(): void
     {
         $client = $this->createClient();
 

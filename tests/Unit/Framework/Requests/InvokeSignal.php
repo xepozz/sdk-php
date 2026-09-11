@@ -22,7 +22,7 @@ final class InvokeSignal extends ServerRequest
                 'runId' => $runId,
                 'name' => $name,
             ],
-            EncodedValues::fromValues($args)
+            EncodedValues::fromValues($args),
         );
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Temporal\Tests\Unit\Interceptor;
 
-use DateTimeInterface;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 use Temporal\Internal\Interceptor\Pipeline;
 
 /**
@@ -19,18 +19,18 @@ class PipelineTestCase extends TestCase
     public function testSimplePipelineOrder(): void
     {
         $pipeline = Pipeline::prepare([
-            fn (string $s, callable $next) => $next($s . 'a') . 'w',
-            fn (string $s, callable $next) => $next($s . 'b') . 'x',
-            fn (string $s, callable $next) => $next($s . 'c') . 'y',
-            fn (string $s, callable $next) => $next($s . 'd') . 'z',
+            static fn(string $s, callable $next) => $next($s . 'a') . 'w',
+            static fn(string $s, callable $next) => $next($s . 'b') . 'x',
+            static fn(string $s, callable $next) => $next($s . 'c') . 'y',
+            static fn(string $s, callable $next) => $next($s . 'd') . 'z',
         ]);
 
-        self::assertSame('-abcdzyxw', $pipeline->with(fn(string $i) => $i, '__invoke')('-'));
+        self::assertSame('-abcdzyxw', $pipeline->with(static fn(string $i) => $i, '__invoke')('-'));
     }
 
     public function testPipelineMultipleArgs(): void
     {
-        $middleware = static function (int $i, stdClass $dto, DateTimeInterface $date, callable $next): mixed {
+        $middleware = static function (int $i, \stdClass $dto, \DateTimeInterface $date, callable $next): mixed {
             ++$i;
             return $next($i, $dto, $date);
         };
@@ -43,11 +43,11 @@ class PipelineTestCase extends TestCase
         ]);
 
         $int = $pipeline->with(
-            fn(int $i, stdClass $class, DateTimeInterface $date) => $i,
+            static fn(int $i, \stdClass $class, \DateTimeInterface $date) => $i,
             '__invoke',
         )(
             1,
-            new stdClass(),
+            new \stdClass(),
             new \DateTimeImmutable(),
         );
 

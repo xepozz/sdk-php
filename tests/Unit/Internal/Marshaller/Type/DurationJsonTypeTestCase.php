@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Temporal\Tests\Unit\Internal\Marshaller\Type;
 
 use Carbon\CarbonInterval;
-use Google\Protobuf\Duration;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Temporal\Internal\Marshaller\MarshallerInterface;

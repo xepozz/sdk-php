@@ -130,11 +130,6 @@ final class State
         $this->getFeature($inputFeature)->activities[] = $class;
     }
 
-    private function getFeature(\Temporal\Tests\Acceptance\App\Input\Feature $feature): Feature
-    {
-        return $this->features[$feature->testClass] ??= new Feature($feature->taskQueue);
-    }
-
     /**
      * @param class-string $class
      */
@@ -148,6 +143,11 @@ final class State
      */
     public function countFeatures(): int
     {
-        return count($this->features);
+        return \count($this->features);
+    }
+
+    private function getFeature(\Temporal\Tests\Acceptance\App\Input\Feature $feature): Feature
+    {
+        return $this->features[$feature->testClass] ??= new Feature($feature->taskQueue);
     }
 }

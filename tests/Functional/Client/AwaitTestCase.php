@@ -61,9 +61,9 @@ class AwaitTestCase extends AbstractClient
                 'test1',
                 'test2',
                 'test3',
-                'test4'
+                'test4',
             ],
-            $run->getResult(Type::TYPE_ARRAY, 3)
+            $run->getResult(Type::TYPE_ARRAY, 3),
         );
     }
 
@@ -80,17 +80,17 @@ class AwaitTestCase extends AbstractClient
         $wait->addValue('test4');
 
         $result = $run->getResult();
-        asort($result);
-        $result = array_values($result);
+        \asort($result);
+        $result = \array_values($result);
 
         $this->assertSame(
             [
                 'TEST1',
                 'TEST2',
                 'TEST3',
-                'TEST4'
+                'TEST4',
             ],
-            $result
+            $result,
         );
     }
 
@@ -107,17 +107,17 @@ class AwaitTestCase extends AbstractClient
         $wait->addValue('test4');
 
         $result = $run->getResult();
-        asort($result);
-        $result = array_values($result);
+        \asort($result);
+        $result = \array_values($result);
 
         $this->assertSame(
             [
                 'IN SIGNAL 2 IN SIGNAL TEST1',
                 'IN SIGNAL 2 IN SIGNAL TEST2',
                 'IN SIGNAL 2 IN SIGNAL TEST3',
-                'IN SIGNAL 2 IN SIGNAL TEST4'
+                'IN SIGNAL 2 IN SIGNAL TEST4',
             ],
-            $result
+            $result,
         );
     }
 
@@ -150,9 +150,9 @@ class AwaitTestCase extends AbstractClient
                 'IN SIGNAL 2 IN SIGNAL TEST1',
                 'IN SIGNAL 2 IN SIGNAL TEST2',
                 'IN SIGNAL 2 IN SIGNAL TEST3',
-                'IN SIGNAL 2 IN SIGNAL TEST4'
+                'IN SIGNAL 2 IN SIGNAL TEST4',
             ],
-            $result
+            $result,
         );
     }
 
@@ -186,7 +186,8 @@ class AwaitTestCase extends AbstractClient
 
         $run = $client->start($wait, 4);
 
-        WorkflowStub::fromWorkflow($wait)->cancel();;
+        WorkflowStub::fromWorkflow($wait)->cancel();
+        ;
 
         try {
             $run->getResult();

@@ -125,7 +125,7 @@ class TestWorkflow
         }
 
         try {
-            yield (function () {
+            yield (static function () {
                 yield Workflow::timer(1);
             })();
             $this->log[] = 'nested timer completed';
@@ -189,7 +189,7 @@ class CancelOnCancelHookWorkflow
             $this->log[] = 'root cancelled';
         }
 
-        Workflow::async(function () {
+        Workflow::async(static function () {
             yield Workflow::timer(1);
         })->onCancel(function (): void {
             $this->log[] = 'oncancel fired';
@@ -213,7 +213,7 @@ class DetachedSurvivesCancelWorkflow
             $this->log[] = 'root cancelled';
         }
 
-        $detached = Workflow::asyncDetached(function () {
+        $detached = Workflow::asyncDetached(static function () {
             yield Workflow::timer(1);
             return 'detached completed';
         });

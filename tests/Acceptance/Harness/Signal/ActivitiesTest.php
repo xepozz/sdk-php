@@ -50,7 +50,7 @@ class FeatureWorkflow
         for ($i = 0; $i < ACTIVITY_COUNT; ++$i) {
             $promises[] = Workflow::executeActivity(
                 'result',
-                options: ActivityOptions::new()->withStartToCloseTimeout(10)
+                options: ActivityOptions::new()->withStartToCloseTimeout(10),
             );
         }
 

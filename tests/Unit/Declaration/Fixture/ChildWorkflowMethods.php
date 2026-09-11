@@ -11,25 +11,25 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Declaration\Fixture;
 
-use Temporal\Common\MethodRetry;
 use Temporal\Workflow\SignalMethod;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/** @WorkflowInterface */
+/**
+ * @WorkflowInterface
+ */
 #[WorkflowInterface]
 class ChildWorkflowMethods extends ParentWorkflowMethods
 {
-    /** @WorkflowMethod */
+    /**
+     * @WorkflowMethod
+     */
     #[WorkflowMethod]
-    public function handler(): void
-    {
-    }
+    public function handler(): void {}
 
-    /** @SignalMethod */
+    /**
+     * @SignalMethod
+     */
     #[SignalMethod]
-    protected function test(): void
-    {
-
-    }
+    protected function test(): void {}
 }

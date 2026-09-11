@@ -19,6 +19,15 @@ use Temporal\Worker\WorkerOptions;
 
 final class PayloadLimitOptionsTestCase extends TestCase
 {
+    /**
+     * @return iterable<array-key, array{int}>
+     */
+    public static function nonPositiveValues(): iterable
+    {
+        yield [0];
+        yield [-1];
+    }
+
     public function testDefaults(): void
     {
         $options = PayloadLimitOptions::new();
@@ -112,15 +121,6 @@ final class PayloadLimitOptionsTestCase extends TestCase
         $options = (new ClientOptions())->withPayloadLimits(PayloadLimitOptions::disabled());
 
         self::assertFalse($options->payloadLimits?->isEnabled());
-    }
-
-    /**
-     * @return iterable<array-key, array{int}>
-     */
-    public static function nonPositiveValues(): iterable
-    {
-        yield [0];
-        yield [-1];
     }
 
     #[DataProvider('nonPositiveValues')]

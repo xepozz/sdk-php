@@ -25,7 +25,7 @@ final class FunctionReduceTestCase extends BaseFunction
 
         Promise::reduce(
             [1, 2, 3],
-            $this->plus()
+            $this->plus(),
         )->then($mock);
     }
 
@@ -40,7 +40,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [1, 2, 3],
             $this->plus(),
-            1
+            1,
         )->then($mock);
     }
 
@@ -55,7 +55,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [1, 2, 3],
             $this->plus(),
-            Promise::resolve(1)
+            Promise::resolve(1),
         )->then($mock);
     }
 
@@ -69,7 +69,7 @@ final class FunctionReduceTestCase extends BaseFunction
 
         Promise::reduce(
             [Promise::resolve(1), Promise::resolve(2), Promise::resolve(3)],
-            $this->plus()
+            $this->plus(),
         )->then($mock);
     }
 
@@ -84,7 +84,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [Promise::resolve(1), Promise::resolve(2), Promise::resolve(3)],
             $this->plus(),
-            1
+            1,
         )->then($mock);
     }
 
@@ -99,7 +99,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [Promise::resolve(1), Promise::resolve(2), Promise::resolve(3)],
             $this->plus(),
-            Promise::resolve(1)
+            Promise::resolve(1),
         )->then($mock);
     }
 
@@ -114,7 +114,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [],
             $this->plus(),
-            1
+            1,
         )->then($mock);
     }
 
@@ -129,13 +129,13 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [],
             $this->plus(),
-            Promise::resolve(1)
+            Promise::resolve(1),
         )->then($mock);
     }
 
     public function testRejectWhenInputContainsRejection(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->once())
@@ -145,7 +145,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [Promise::resolve(1), Promise::reject($e), Promise::resolve(3)],
             $this->plus(),
-            Promise::resolve(1)
+            Promise::resolve(1),
         )->then($this->expectCallableNever(), $mock);
     }
 
@@ -163,7 +163,7 @@ final class FunctionReduceTestCase extends BaseFunction
 
         Promise::reduce(
             [],
-            $this->plus()
+            $this->plus(),
         )->then($mock);
     }
 
@@ -177,7 +177,7 @@ final class FunctionReduceTestCase extends BaseFunction
 
         Promise::reduce(
             [null, null, 1, null, 1, 1],
-            $this->plus()
+            $this->plus(),
         )->then($mock);
     }
 
@@ -192,7 +192,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [null, null, 1, null, 1, 1],
             $this->plus(),
-            1
+            1,
         )->then($mock);
     }
 
@@ -207,13 +207,13 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [1, 2, 3],
             $this->append(),
-            ''
+            '',
         )->then($mock);
     }
 
     public function testProvideCorrectBasisValue(): void
     {
-        $insertIntoArray = function ($arr, $val, $i) {
+        $insertIntoArray = static function ($arr, $val, $i) {
             $arr[$i] = $val;
 
             return $arr;
@@ -232,7 +232,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [$d1->promise(), $d2->promise(), $d3->promise()],
             $insertIntoArray,
-            []
+            [],
         )->then($mock);
 
         $d3->resolve(3);
@@ -242,7 +242,7 @@ final class FunctionReduceTestCase extends BaseFunction
 
     public function testRejectWhenInputPromiseRejects(): void
     {
-        $e = new Exception();
+        $e = new \Exception();
         $mock = $this->createCallableMock();
         $mock
             ->expects($this->once())
@@ -252,7 +252,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [Promise::reject($e)],
             $this->plus(),
-            1
+            1,
         )->then($this->expectCallableNever(), $mock);
     }
 
@@ -266,7 +266,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [$mock],
             $this->plus(),
-            1
+            1,
         )->cancel();
     }
 
@@ -285,7 +285,7 @@ final class FunctionReduceTestCase extends BaseFunction
         Promise::reduce(
             [$mock1, $mock2],
             $this->plus(),
-            1
+            1,
         )->cancel();
     }
 

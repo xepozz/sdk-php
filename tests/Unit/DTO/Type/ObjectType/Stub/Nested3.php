@@ -15,6 +15,5 @@ final class Nested3
 {
     public function __construct(
         public string $value = 'foo',
-    ) {
-    }
+    ) {}
 }

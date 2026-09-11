@@ -12,8 +12,6 @@ declare(strict_types=1);
 namespace Temporal\Tests\Functional\Interceptor;
 
 use Carbon\CarbonInterval;
-use Temporal\Client\Update\LifecycleStage;
-use Temporal\Client\Update\UpdateOptions;
 use Temporal\Client\WorkflowOptions;
 use Temporal\Testing\WithoutTimeSkipping;
 use Temporal\Tests\Workflow\Interceptor\HeadersWorkflow;
@@ -39,7 +37,7 @@ final class InterceptorsTestCase extends AbstractClient
                 ->withWorkflowExecutionTimeout(CarbonInterval::seconds(5)),
         );
 
-        $result = (array)$workflow->handler();
+        $result = (array) $workflow->handler();
 
         // Workflow header
         $this->assertEquals([
@@ -47,7 +45,7 @@ final class InterceptorsTestCase extends AbstractClient
             'start' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::execute() */
             'execute' => '1',
-        ], (array)$result[0]);
+        ], (array) $result[0]);
         // Activity header
         $this->assertEquals([
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::start */
@@ -58,7 +56,7 @@ final class InterceptorsTestCase extends AbstractClient
             'handleActivityInbound' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::handleOutboundRequest() */
             'ExecuteActivity' => '1',
-        ], (array)$result[1]);
+        ], (array) $result[1]);
     }
 
     public function testSignalMethod(): void
@@ -85,7 +83,7 @@ final class InterceptorsTestCase extends AbstractClient
             'execute' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::handleSignal() */
             'handleSignal' => '1',
-        ], (array)$run->getResult());
+        ], (array) $run->getResult());
     }
 
     public function testSignalWithStartMethod(): void
@@ -111,7 +109,7 @@ final class InterceptorsTestCase extends AbstractClient
             'execute' => '1',
             /** @see \Temporal\Tests\Interceptor\InterceptorCallsCounter::handleSignal() */
             'handleSignal' => '1',
-        ], (array)$run->getResult());
+        ], (array) $run->getResult());
     }
 
     public function testUpdateWithStartMethod(): void

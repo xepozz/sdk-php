@@ -20,7 +20,6 @@ use Temporal\Api\Common\V1\Memo;
 use Temporal\Api\Common\V1\Payload;
 use Temporal\Api\Common\V1\Payloads;
 use Temporal\Api\Common\V1\SearchAttributes;
-use Temporal\Api\Common\V1\WorkflowExecution;
 use Temporal\Api\Failure\V1\ApplicationFailureInfo;
 use Temporal\Api\Failure\V1\CanceledFailureInfo;
 use Temporal\Api\Failure\V1\Failure;
@@ -340,6 +339,22 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(20, $this->logger->records);
     }
 
+    public function testTheCheckersUseNoProtobufApiMissingFromTheExtension(): void
+    {
+        // The pure PHP implementation and the `protobuf` extension do not share these APIs,
+        // and CI runs the suite with only one of them at a time
+        $sources = [
+            (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Client/PayloadSizeChecker.php'),
+            (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Workflow/PayloadSizeWarner.php'),
+        ];
+
+        foreach ($sources as $source) {
+            self::assertDoesNotMatchRegularExpression('/[>:]byteSize\(/', $source);
+            self::assertStringNotContainsString('DescriptorPool', $source);
+            self::assertDoesNotMatchRegularExpression('/[>:]getDescriptor(ForEntity)?\(/', $source);
+        }
+    }
+
     public function testSearchAttributesAreNotMeasured(): void
     {
         $request = (new StartWorkflowExecutionRequest())
@@ -407,12 +422,6 @@ final class PayloadSizeCheckerTestCase extends TestCase
         parent::setUp();
     }
 
-    private function check(object $request, string $method, ?PayloadLimitOptions $options = null): void
-    {
-        $checker = new PayloadSizeChecker($options ?? new PayloadLimitOptions(1024, 1024), $this->logger);
-        $checker->check($method, $request);
-    }
-
     private static function payload(int $size): Payload
     {
         return (new Payload())->setData(\str_repeat('x', $size));
@@ -449,5 +458,11 @@ final class PayloadSizeCheckerTestCase extends TestCase
         $memoSize > 0 and $action->setMemo(self::memo($memoSize));
 
         return (new Schedule())->setAction((new ScheduleAction())->setStartWorkflow($action));
+    }
+
+    private function check(object $request, string $method, ?PayloadLimitOptions $options = null): void
+    {
+        $checker = new PayloadSizeChecker($options ?? new PayloadLimitOptions(1024, 1024), $this->logger);
+        $checker->check($method, $request);
     }
 }

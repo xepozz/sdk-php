@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Router;
 
-use RuntimeException;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
@@ -12,13 +11,11 @@ use Temporal\Activity\ActivityMethod;
 final class DummyActivity
 {
     #[ActivityMethod(name: "DoNothing")]
-    public function doNothing(): void
-    {
-    }
+    public function doNothing(): void {}
 
     #[ActivityMethod(name: "DoFail")]
     public function doFail(): void
     {
-        throw new RuntimeException("Failed");
+        throw new \RuntimeException("Failed");
     }
 }

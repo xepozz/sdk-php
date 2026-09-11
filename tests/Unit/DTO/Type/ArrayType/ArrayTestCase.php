@@ -30,7 +30,7 @@ class ArrayTestCase extends AbstractDTOMarshalling
         })();
         $dto->iterableNullable = null;
         $dto->assoc = ['foo' => 'bar'];
-        $dto->assocOfType = ['foo' => (object)['baz' => 'bar']];
+        $dto->assocOfType = ['foo' => (object) ['baz' => 'bar']];
 
         $result = $this->marshal($dto);
         $this->assertSame([
@@ -71,7 +71,7 @@ class ArrayTestCase extends AbstractDTOMarshalling
         $this->assertSame(['itn'], $dto->iterableNullable);
         $this->assertSame(null, $dto->nullableBar);
         $this->assertSame(['foo' => 'bar'], $dto->assoc);
-        $this->assertEquals(['key' => (object)['foo' => 'bar']], $dto->assocOfType);
+        $this->assertEquals(['key' => (object) ['foo' => 'bar']], $dto->assocOfType);
     }
 
     public function testSetNullToNotNullable(): void
