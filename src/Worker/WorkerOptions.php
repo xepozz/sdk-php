@@ -279,6 +279,20 @@ class WorkerOptions
     public int $maxConcurrentEagerActivityExecutionSize = 0;
 
     /**
+     * Optional: Disable payload size error limit enforcement in the worker.
+     *
+     * When FALSE, the worker validates the payload size before submitting it to the Temporal
+     * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
+     * and the server rejects the oversized payload instead.
+     *
+     * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Marshal(name: 'DisablePayloadErrorLimit')]
+    public bool $disablePayloadErrorLimit = false;
+
+    /**
      * Optional: Disable allowing workflow and activity functions that are
      * registered with custom names from being able to be called with their
      * function references.
@@ -784,6 +798,25 @@ class WorkerOptions
 
         $self = clone $this;
         $self->maxConcurrentEagerActivityExecutionSize = $size;
+        return $self;
+    }
+
+    /**
+     * Optional: Disable payload size error limit enforcement in the worker.
+     *
+     * When FALSE, the worker validates the payload size before submitting it to the Temporal
+     * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
+     * and the server rejects the oversized payload instead.
+     *
+     * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Pure]
+    public function withDisablePayloadErrorLimit(bool $disable = true): self
+    {
+        $self = clone $this;
+        $self->disablePayloadErrorLimit = $disable;
         return $self;
     }
 

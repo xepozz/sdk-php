@@ -51,6 +51,7 @@ class WorkerOptionsTestCase extends AbstractDTOMarshalling
             'MaxHeartbeatThrottleInterval' => null,
             'DisableEagerActivities' => false,
             'MaxConcurrentEagerActivityExecutionSize' => 0,
+            'DisablePayloadErrorLimit' => false,
             'DisableRegistrationAliasing' => false,
             'BuildID' => "",
             'DeploymentOptions' => null,
@@ -332,6 +333,17 @@ class WorkerOptionsTestCase extends AbstractDTOMarshalling
         self::assertNotSame($dto, $result);
         self::assertSame(0, $dto->maxConcurrentEagerActivityExecutionSize);
         self::assertSame(10, $result->maxConcurrentEagerActivityExecutionSize);
+    }
+
+    public function testDisablePayloadErrorLimit(): void
+    {
+        $dto = new WorkerOptions();
+        $result = $dto->withDisablePayloadErrorLimit();
+
+        self::assertNotSame($dto, $result);
+        self::assertFalse($dto->disablePayloadErrorLimit);
+        self::assertTrue($result->disablePayloadErrorLimit);
+        self::assertTrue($this->marshal($result)['DisablePayloadErrorLimit']);
     }
 
     public function testDisableRegistrationAliasing(): void
