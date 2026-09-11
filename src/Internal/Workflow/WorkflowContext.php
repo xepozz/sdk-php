@@ -495,12 +495,12 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         $this->readonly and throw new \RuntimeException('Workflow is not initialized.');
         $this->recordTrace();
 
-        // Warn about oversized payloads before the command is sent
-        $this->payloadSizeWarner()?->check($request);
-
         // Intercept workflow outbound calls
         return $this->requestInterceptor->with(
             function (RequestInterface $request) use ($waitResponse): PromiseInterface {
+                // Warn about oversized payloads of the command that is about to be sent
+                $this->payloadSizeWarner()?->check($request);
+
                 if (!$waitResponse) {
                     $this->client->send($request);
                     return Promise::resolve();

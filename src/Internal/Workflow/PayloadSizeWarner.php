@@ -14,6 +14,7 @@ namespace Temporal\Internal\Workflow;
 use Psr\Log\LoggerInterface;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
+use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
@@ -49,13 +50,24 @@ final class PayloadSizeWarner
             return;
         }
 
-        $payloads = $request->getPayloads();
-        if ($payloads->count() === 0) {
+        // Local Activity arguments are not sent to the server
+        if ($request->getName() === ExecuteLocalActivity::NAME) {
             return;
         }
 
-        $payloads->setDataConverter($this->converter);
-        $size = $payloads->toPayloads()->byteSize();
+        try {
+            $payloads = $request->getPayloads();
+            if ($payloads->count() === 0) {
+                return;
+            }
+
+            $payloads->setDataConverter($this->converter);
+            $size = $payloads->toPayloads()->byteSize();
+        } catch (\Throwable) {
+            // Measuring is an observability feature: it must not affect the Workflow in any way.
+            // A value that cannot be converted fails later, in the codec, as it did before.
+            return;
+        }
 
         if ($size <= $limit) {
             return;
