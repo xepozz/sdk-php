@@ -13,6 +13,7 @@ namespace Temporal\Worker;
 
 use JetBrains\PhpStorm\Pure;
 use Temporal\Activity\ActivityOptions;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Marshaller\Meta\Marshal;
 use Temporal\Internal\Marshaller\Type\DateIntervalType;
 use Temporal\Internal\Marshaller\Type\EnumValueType;
@@ -335,6 +336,16 @@ class WorkerOptions
      */
     #[Marshal(name: 'DeploymentOptions')]
     public WorkerDeploymentOptions $deploymentOptions;
+
+    /**
+     * Payload size limits at which the Workflow logs a warning; NULL means the defaults.
+     *
+     * The property is private because it configures the PHP side only and must never be sent
+     * to the RoadRunner worker: only public properties are marshalled.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    private ?PayloadLimitOptions $payloadLimits = null;
 
     #[Pure]
     public static function new(): self
@@ -818,6 +829,31 @@ class WorkerOptions
         $self = clone $this;
         $self->disablePayloadErrorLimit = $disable;
         return $self;
+    }
+
+    /**
+     * Payload size limits at which the Workflow logs a warning.
+     *
+     * Use {@see PayloadLimitOptions::disabled()} to turn the warnings off.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Pure]
+    public function withPayloadLimits(PayloadLimitOptions $options): self
+    {
+        $self = clone $this;
+        $self->payloadLimits = $options;
+        return $self;
+    }
+
+    /**
+     * Payload size limits at which the Workflow logs a warning.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    public function getPayloadLimits(): PayloadLimitOptions
+    {
+        return $this->payloadLimits ??= PayloadLimitOptions::new();
     }
 
     /**

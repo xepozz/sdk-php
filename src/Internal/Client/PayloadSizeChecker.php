@@ -11,13 +11,28 @@ declare(strict_types=1);
 
 namespace Temporal\Internal\Client;
 
-use Google\Protobuf\Internal\DescriptorPool;
-use Google\Protobuf\Internal\FieldDescriptor;
-use Google\Protobuf\Internal\GPBType;
-use Google\Protobuf\Internal\MapField;
 use Google\Protobuf\Internal\Message;
-use Google\Protobuf\Internal\RepeatedField;
 use Psr\Log\LoggerInterface;
+use Temporal\Api\Common\V1\Memo;
+use Temporal\Api\Common\V1\Payloads;
+use Temporal\Api\Common\V1\SearchAttributes;
+use Temporal\Api\Schedule\V1\Schedule;
+use Temporal\Api\Workflowservice\V1\CreateScheduleRequest;
+use Temporal\Api\Workflowservice\V1\QueryWorkflowRequest;
+use Temporal\Api\Workflowservice\V1\RecordActivityTaskHeartbeatByIdRequest;
+use Temporal\Api\Workflowservice\V1\RecordActivityTaskHeartbeatRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskCanceledByIdRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskCanceledRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedByIdRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedByIdRequest;
+use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedRequest;
+use Temporal\Api\Workflowservice\V1\SignalWithStartWorkflowExecutionRequest;
+use Temporal\Api\Workflowservice\V1\SignalWorkflowExecutionRequest;
+use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
+use Temporal\Api\Workflowservice\V1\TerminateWorkflowExecutionRequest;
+use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
+use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
 
 /**
@@ -27,6 +42,9 @@ use Temporal\Common\PayloadLimitOptions;
  * measured as a whole, while `map<string, Payload>` fields are measured as the sum of key lengths
  * and payload data lengths.
  *
+ * Requests are inspected field by field rather than by walking protobuf descriptors: the
+ * descriptor API differs between the pure PHP implementation and the `protobuf` extension.
+ *
  * @internal
  */
 final class PayloadSizeChecker
@@ -35,15 +53,6 @@ final class PayloadSizeChecker
      * Message code used by all the SDKs for the payload size warning.
      */
     private const MESSAGE_CODE = 'TMPRL1103';
-
-    private const TYPE_PAYLOADS = 'temporal.api.common.v1.Payloads';
-    private const TYPE_MEMO = 'temporal.api.common.v1.Memo';
-    private const TYPE_SEARCH_ATTRIBUTES = 'temporal.api.common.v1.SearchAttributes';
-
-    /**
-     * Protects from cycles in the message graph, e.g. {@see \Temporal\Api\Failure\V1\Failure}.
-     */
-    private const MAX_DEPTH = 10;
 
     public function __construct(
         private readonly PayloadLimitOptions $limits,
@@ -55,116 +64,153 @@ final class PayloadSizeChecker
      */
     public function check(string $method, object $request): void
     {
-        if (!$request instanceof Message || !$this->limits->isEnabled()) {
+        if (!$this->limits->isEnabled()) {
             return;
         }
 
-        $this->inspect($method, $request, 0);
-    }
-
-    private static function typeNameOf(Message $message): ?string
-    {
-        return DescriptorPool::getGeneratedPool()
-            ->getDescriptorByClassName($message::class)
-            ?->getFullName();
-    }
-
-    private function inspect(string $method, Message $message, int $depth): void
-    {
-        if ($depth > self::MAX_DEPTH) {
-            return;
-        }
-
-        $descriptor = DescriptorPool::getGeneratedPool()->getDescriptorByClassName($message::class);
-        if ($descriptor === null) {
-            return;
-        }
-
-        /** @var FieldDescriptor $field */
-        foreach ($descriptor->getField() as $field) {
-            if ($field->getType() !== GPBType::MESSAGE) {
-                continue;
-            }
-
-            $value = $message->{$field->getGetter()}();
-            if ($value === null) {
-                continue;
-            }
-
-            if ($field->isMap()) {
-                \assert($value instanceof MapField);
-                foreach ($value as $item) {
-                    $item instanceof Message and $this->inspectValue($method, $item, $depth);
-                }
-                continue;
-            }
-
-            if ($value instanceof RepeatedField) {
-                foreach ($value as $item) {
-                    $item instanceof Message and $this->inspectValue($method, $item, $depth);
-                }
-                continue;
-            }
-
-            \assert($value instanceof Message);
-            $this->inspectValue($method, $value, $depth);
+        try {
+            $this->inspect($method, $request);
+        } catch (\Throwable) {
+            // Measuring is an observability feature: it must never break the RPC call
         }
     }
 
-    private function inspectValue(string $method, Message $value, int $depth): void
+    /**
+     * Size of a message as the server sees it on the wire.
+     */
+    private static function sizeOf(?Message $message): int
     {
-        switch (self::typeNameOf($value)) {
-            case self::TYPE_PAYLOADS:
-                $this->warnOnPayloadSize($method, $value->byteSize());
+        return $message === null ? 0 : \strlen($message->serializeToString());
+    }
+
+    /**
+     * The server measures `map<string, Payload>` as the sum of key and payload data lengths.
+     */
+    private static function sizeOfSearchAttributes(?SearchAttributes $attributes): int
+    {
+        $size = 0;
+        foreach ($attributes?->getIndexedFields() ?? [] as $key => $payload) {
+            $size += \strlen((string) $key) + \strlen($payload->getData());
+        }
+
+        return $size;
+    }
+
+    private function inspect(string $method, object $request): void
+    {
+        switch (true) {
+            case $request instanceof StartWorkflowExecutionRequest:
+                $this->payloads($method, $request->getInput());
+                $this->memo($method, $request->getMemo());
+                $this->searchAttributes($method, $request->getSearchAttributes());
                 return;
 
-            case self::TYPE_MEMO:
-                $this->warnOnMemoSize($method, $value->byteSize());
+            case $request instanceof SignalWithStartWorkflowExecutionRequest:
+                $this->payloads($method, $request->getInput());
+                $this->payloads($method, $request->getSignalInput());
+                $this->memo($method, $request->getMemo());
+                $this->searchAttributes($method, $request->getSearchAttributes());
                 return;
 
-            case self::TYPE_SEARCH_ATTRIBUTES:
-                // Server measures search attributes as the sum of key and payload data lengths
-                $size = 0;
-                /** @psalm-suppress UndefinedMethod */
-                foreach ($value->getIndexedFields() as $key => $payload) {
-                    $size += \strlen((string) $key) + \strlen($payload->getData());
-                }
-
-                $this->warnOnPayloadSize($method, $size);
+            case $request instanceof SignalWorkflowExecutionRequest:
+                $this->payloads($method, $request->getInput());
                 return;
 
-            default:
-                $this->inspect($method, $value, $depth + 1);
+            case $request instanceof UpdateWorkflowExecutionRequest:
+                $this->payloads($method, $request->getRequest()?->getInput()?->getArgs());
+                return;
+
+            case $request instanceof QueryWorkflowRequest:
+                $this->payloads($method, $request->getQuery()?->getQueryArgs());
+                return;
+
+            case $request instanceof RespondActivityTaskCompletedRequest:
+            case $request instanceof RespondActivityTaskCompletedByIdRequest:
+                $this->payloads($method, $request->getResult());
+                return;
+
+            case $request instanceof RespondActivityTaskFailedRequest:
+            case $request instanceof RespondActivityTaskFailedByIdRequest:
+                // A failure carries payloads in its details; it is measured as a whole
+                $this->warn(
+                    $method,
+                    'payloads',
+                    self::sizeOf($request->getFailure()),
+                    $this->limits->payloadSizeWarning,
+                );
+                return;
+
+            case $request instanceof RespondActivityTaskCanceledRequest:
+            case $request instanceof RespondActivityTaskCanceledByIdRequest:
+            case $request instanceof RecordActivityTaskHeartbeatRequest:
+            case $request instanceof RecordActivityTaskHeartbeatByIdRequest:
+            case $request instanceof TerminateWorkflowExecutionRequest:
+                $this->payloads($method, $request->getDetails());
+                return;
+
+            case $request instanceof CreateScheduleRequest:
+                // The server checks the memo and the workflow input of a schedule as one value
+                $this->warn(
+                    $method,
+                    'payloads',
+                    self::sizeOf($request->getMemo()) + $this->scheduleInputSize($request->getSchedule()),
+                    $this->limits->payloadSizeWarning,
+                );
+                $this->searchAttributes($method, $request->getSearchAttributes());
+                return;
+
+            case $request instanceof UpdateScheduleRequest:
+                $this->warn(
+                    $method,
+                    'payloads',
+                    $this->scheduleInputSize($request->getSchedule()),
+                    $this->limits->payloadSizeWarning,
+                );
+                return;
         }
     }
 
-    private function warnOnPayloadSize(string $method, int $size): void
+    private function scheduleInputSize(?Schedule $schedule): int
     {
-        $limit = $this->limits->payloadSizeWarning;
-        if ($limit === null || $size <= $limit) {
-            return;
-        }
+        $action = $schedule?->getAction()?->getStartWorkflow();
 
-        $this->logger->warning(
-            \sprintf(
-                '[%s] Attempted to send payloads with size that exceeded the warning limit.',
-                self::MESSAGE_CODE,
-            ),
-            ['method' => $method, 'size' => $size, 'limit' => $limit],
+        return self::sizeOf($action?->getInput()) + self::sizeOf($action?->getMemo());
+    }
+
+    private function payloads(string $method, ?Payloads $payloads): void
+    {
+        $this->warn($method, 'payloads', self::sizeOf($payloads), $this->limits->payloadSizeWarning);
+    }
+
+    private function memo(string $method, ?Memo $memo): void
+    {
+        $this->warn($method, 'memo', self::sizeOf($memo), $this->limits->memoSizeWarning);
+    }
+
+    private function searchAttributes(string $method, ?SearchAttributes $attributes): void
+    {
+        $this->warn(
+            $method,
+            'payloads',
+            self::sizeOfSearchAttributes($attributes),
+            $this->limits->payloadSizeWarning,
         );
     }
 
-    private function warnOnMemoSize(string $method, int $size): void
+    /**
+     * @param non-empty-string $kind
+     */
+    private function warn(string $method, string $kind, int $size, ?int $limit): void
     {
-        $limit = $this->limits->memoSizeWarning;
         if ($limit === null || $size <= $limit) {
             return;
         }
 
         $this->logger->warning(
             \sprintf(
-                '[%s] Attempted to send a memo with size that exceeded the warning limit.',
+                '[%s] Attempted to send a %s with size that exceeded the warning limit.',
                 self::MESSAGE_CODE,
+                $kind,
             ),
             ['method' => $method, 'size' => $size, 'limit' => $limit],
         );

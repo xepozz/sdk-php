@@ -62,7 +62,8 @@ final class PayloadSizeWarner
             }
 
             $payloads->setDataConverter($this->converter);
-            $size = $payloads->toPayloads()->byteSize();
+            // `byteSize()` is not available when the protobuf extension is used
+            $size = \strlen($payloads->toPayloads()->serializeToString());
         } catch (\Throwable) {
             // Measuring is an observability feature: it must not affect the Workflow in any way.
             // A value that cannot be converted fails later, in the codec, as it did before.

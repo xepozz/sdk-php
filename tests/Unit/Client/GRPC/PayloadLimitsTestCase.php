@@ -56,7 +56,44 @@ final class PayloadLimitsTestCase extends TestCase
 
     public function testLimitsCanBeDisabled(): void
     {
-        $client = $this->createClient()->withPayloadLimits(null, $this->createLogger());
+        $client = $this->createClient()->withPayloadLimits(
+            PayloadLimitOptions::disabled(),
+            $this->createLogger(),
+        );
+
+        $client->testCall($this->request(2000));
+
+        self::assertSame([], $this->records);
+    }
+
+    public function testWarningsCanBeTurnedOff(): void
+    {
+        $client = $this->createClient()
+            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger())
+            ->withoutPayloadLimits();
+
+        $client->testCall($this->request(2000));
+
+        self::assertSame([], $this->records);
+    }
+
+    public function testInterceptorThatSkipsTheCallIsNotMeasured(): void
+    {
+        $client = $this->createClient()
+            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger())
+            ->withInterceptorPipeline(
+                Pipeline::prepare([new class implements GrpcClientInterceptor {
+                    public function interceptCall(
+                        string $method,
+                        object $arg,
+                        ContextInterface $ctx,
+                        callable $next,
+                    ): object {
+                        // The request never leaves the interceptor, so there is nothing to warn about
+                        return (object) ['method' => $method];
+                    }
+                }]),
+            );
 
         $client->testCall($this->request(2000));
 
@@ -142,26 +179,27 @@ final class PayloadLimitsTestCase extends TestCase
                 return ConnectionState::Ready->value;
             }
 
+            /**
+             * Stands for a real RPC method: returns a successful response without any IO.
+             */
+            public function testCall(object $arg, array $metadata = [], array $options = []): object
+            {
+                return new class {
+                    public function wait(): array
+                    {
+                        return [(object) ['result' => true], (object) ['code' => 0]];
+                    }
+                };
+            }
+
             public function close(): void {}
         };
 
-        return (new class($stub) extends ServiceClient {
+        return new class($stub) extends ServiceClient {
             public function testCall(object $request): mixed
             {
                 return $this->invoke('testCall', $request, null);
             }
-        })->withInterceptorPipeline(
-            Pipeline::prepare([new class implements GrpcClientInterceptor {
-                public function interceptCall(
-                    string $method,
-                    object $arg,
-                    ContextInterface $ctx,
-                    callable $next,
-                ): object {
-                    // Do not perform a real RPC call
-                    return (object) ['method' => $method];
-                }
-            }]),
-        );
+        };
     }
 }

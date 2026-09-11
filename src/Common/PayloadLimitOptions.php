@@ -54,6 +54,14 @@ final class PayloadLimitOptions
     }
 
     /**
+     * No warnings at all.
+     */
+    public static function disabled(): self
+    {
+        return new self(null, null);
+    }
+
+    /**
      * Limit in bytes at which a payload size warning is logged.
      *
      * @param null|positive-int $bytes NULL disables the warning.

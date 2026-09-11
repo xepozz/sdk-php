@@ -172,12 +172,24 @@ abstract class BaseClient implements GrpcClientInterface
      *
      * @experimental This API is experimental and may change in the future.
      */
-    final public function withPayloadLimits(?PayloadLimitOptions $options, LoggerInterface $logger): static
+    final public function withPayloadLimits(PayloadLimitOptions $options, LoggerInterface $logger): static
     {
         $clone = clone $this;
-        $clone->payloadSizeChecker = $options === null || !$options->isEnabled()
-            ? null
-            : new PayloadSizeChecker($options, $logger);
+        $clone->payloadSizeChecker = $options->isEnabled()
+            ? new PayloadSizeChecker($options, $logger)
+            : null;
+        return $clone;
+    }
+
+    /**
+     * Stop warning about oversized payloads.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    final public function withoutPayloadLimits(): static
+    {
+        $clone = clone $this;
+        $clone->payloadSizeChecker = null;
         return $clone;
     }
 
@@ -226,8 +238,6 @@ abstract class BaseClient implements GrpcClientInterface
             ] + $ctx->getMetadata());
         }
 
-        $this->payloadSizeChecker?->check($method, $arg);
-
         return $this->invokePipeline !== null
             ? ($this->invokePipeline)($method, $arg, $ctx)
             : $this->call($method, $arg, $ctx);
@@ -249,6 +259,9 @@ abstract class BaseClient implements GrpcClientInterface
      */
     private function call(string $method, object $arg, ContextInterface $ctx): object
     {
+        // Measure the request that is actually sent, i.e. after the interceptors
+        $this->payloadSizeChecker?->check($method, $arg);
+
         $attempt = 0;
         $retryOption = RpcRetryOptions::fromRetryOptions($ctx->getRetryOptions());
         $initialIntervalMs = $congestionInitialIntervalMs = $throttler = null;

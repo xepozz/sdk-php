@@ -860,7 +860,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     {
         $limits = $this->services->payloadLimits;
 
-        return $limits === null
+        return $limits === null || !$limits->isEnabled()
             ? null
             : $this->payloadSizeWarner ??= new PayloadSizeWarner(
                 $limits,

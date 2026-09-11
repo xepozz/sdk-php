@@ -104,7 +104,7 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(2, $this->records);
     }
 
-    public function testWalksIntoNestedMessages(): void
+    public function testMeasuresActivityFailureDetails(): void
     {
         $request = (new RespondActivityTaskFailedRequest())
             ->setFailure(
@@ -118,7 +118,7 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(1, $this->records);
     }
 
-    public function testSurvivesRecursiveMessages(): void
+    public function testMeasuresTheWholeFailureChain(): void
     {
         $failure = (new Failure())->setApplicationFailureInfo(
             (new ApplicationFailureInfo())->setDetails(self::payloads(2000)),
@@ -130,7 +130,8 @@ final class PayloadSizeCheckerTestCase extends TestCase
 
         $this->check($request, 'RespondActivityTaskFailed');
 
-        self::assertCount(2, $this->records);
+        self::assertCount(1, $this->records);
+        self::assertGreaterThan(4000, $this->records[0][1]['size']);
     }
 
     public function testDisabledLimitsAreNotChecked(): void

@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace Temporal\Worker;
 
 use Psr\Log\LoggerInterface;
-use Temporal\Common\PayloadLimitOptions;
 use Temporal\Exception\ExceptionInterceptorInterface;
 use Temporal\Interceptor\PipelineProvider;
 use Temporal\Plugin\PluginRegistry;
@@ -39,17 +38,12 @@ interface WorkerFactoryInterface
     /**
      * Create a new Temporal Worker with the name of the task queue and register in worker.
      */
-    /**
-     * @param null|PayloadLimitOptions $payloadLimits Payload size limits at which the Workflow logs
-     *        a warning. NULL disables the warnings.
-     */
     public function newWorker(
         string $taskQueue = self::DEFAULT_TASK_QUEUE,
         ?WorkerOptions $options = null,
         ?ExceptionInterceptorInterface $exceptionInterceptor = null,
         ?PipelineProvider $interceptorProvider = null,
         ?LoggerInterface $logger = null,
-        ?PayloadLimitOptions $payloadLimits = new PayloadLimitOptions(),
     ): WorkerInterface;
 
     /**

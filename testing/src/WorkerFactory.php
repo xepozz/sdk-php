@@ -7,7 +7,6 @@ namespace Temporal\Testing;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Temporal\Client\WorkflowClient;
-use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\Exception\ExceptionInterceptor;
@@ -74,7 +73,6 @@ class WorkerFactory extends \Temporal\WorkerFactory
         ?ExceptionInterceptorInterface $exceptionInterceptor = null,
         ?PipelineProvider $interceptorProvider = null,
         ?LoggerInterface $logger = null,
-        ?PayloadLimitOptions $payloadLimits = new PayloadLimitOptions(),
     ): WorkerInterface {
         $options ??= WorkerOptions::new();
 
@@ -109,7 +107,7 @@ class WorkerFactory extends \Temporal\WorkerFactory
                         $options->enableLoggingInReplay,
                         $taskQueue,
                     ),
-                    $payloadLimits,
+                    $options->getPayloadLimits(),
                 ),
                 $this->rpc,
             ),

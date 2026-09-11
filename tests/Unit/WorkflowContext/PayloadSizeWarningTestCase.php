@@ -169,11 +169,11 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
     ): void {
         $logger = $this->spyLogger();
 
-        $this->worker = $this->factory->newWorker(
-            options: WorkerOptions::new()->withEnableLoggingInReplay($enableLoggingInReplay),
-            logger: $logger,
-            payloadLimits: $limits,
-        );
+        $options = WorkerOptions::new()
+            ->withEnableLoggingInReplay($enableLoggingInReplay)
+            ->withPayloadLimits($limits ?? PayloadLimitOptions::disabled());
+
+        $this->worker = $this->factory->newWorker(options: $options, logger: $logger);
         $this->worker->registerWorkflowObject(
             new
             #[Workflow\WorkflowInterface]
