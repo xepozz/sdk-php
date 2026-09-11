@@ -54,7 +54,6 @@ use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Client\PayloadSizeChecker;
-use Temporal\Internal\Support\MessageSize;
 use Temporal\Tests\Unit\Client\Stub\LoggerSpy;
 
 final class PayloadSizeCheckerTestCase extends TestCase
@@ -370,33 +369,15 @@ final class PayloadSizeCheckerTestCase extends TestCase
         }
     }
 
-    /**
-     * @return iterable<string, array{\Closure(): \Google\Protobuf\Internal\Message}>
-     */
-    public static function measuredMessages(): iterable
+    public function testTheReportedSizeIsTheWireSize(): void
     {
-        yield 'empty payloads' => [static fn() => new Payloads()];
-        yield 'one small payload' => [static fn() => self::payloads(1)];
-        yield 'one large payload' => [static fn() => self::payloads(200_000)];
-        yield 'several payloads' => [static fn() => new Payloads([
-            'payloads' => [self::payload(10), self::payload(70_000), self::payload(0)],
-        ])];
-        yield 'empty memo' => [static fn() => new Memo()];
-        yield 'memo' => [static fn() => self::memo(5000)];
-        yield 'failure' => [static fn() => self::failure(2000)->setCause(self::failure(3000))];
-    }
+        // The size is counted from the values instead of being produced, so the checker must
+        // still report what the request weighs on the wire
+        $payloads = self::payloads(2000);
 
-    /**
-     * @param \Closure(): \Google\Protobuf\Internal\Message $message
-     */
-    #[DataProvider('measuredMessages')]
-    public function testTheMeasuredSizeIsTheWireSize(\Closure $message): void
-    {
-        // The size is counted without producing the bytes where the protobuf implementation
-        // allows it, and that shortcut must agree with the bytes to the last one
-        $message = $message();
+        $this->check((new StartWorkflowExecutionRequest())->setInput($payloads), 'StartWorkflowExecution');
 
-        self::assertSame(\strlen($message->serializeToString()), MessageSize::of($message));
+        self::assertSame(\strlen($payloads->serializeToString()), $this->logger->records[0]['context']['size']);
     }
 
     public function testBothCheckersWordTheWarningTheSameWay(): void

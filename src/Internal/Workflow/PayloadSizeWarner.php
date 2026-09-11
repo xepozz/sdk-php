@@ -152,7 +152,7 @@ final class PayloadSizeWarner
         }
 
         $values->setDataConverter($this->converter);
-        $this->warn($command, 'payloads', MessageSize::of($values->toPayloads()), $limit);
+        $this->warn($command, 'payloads', MessageSize::ofPayloads($values->toPayloads()), $limit);
     }
 
     /**
@@ -173,7 +173,7 @@ final class PayloadSizeWarner
 
         $memo = (new Memo())->setFields($payloads);
 
-        $this->warn($command, 'memo', MessageSize::of($memo), $limit);
+        $this->warn($command, 'memo', MessageSize::ofMemo($memo), $limit);
     }
 
     /**
