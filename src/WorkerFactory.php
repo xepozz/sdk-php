@@ -46,7 +46,9 @@ use Temporal\Internal\Transport\Client;
 use Temporal\Internal\Transport\ClientInterface;
 use Temporal\Internal\Transport\Router;
 use Temporal\Internal\Transport\RouterInterface;
+use Temporal\Exception\PayloadSizeExceededException;
 use Temporal\Internal\Transport\PayloadSizeLimiter;
+use Temporal\Worker\Transport\Command\CommandInterface;
 use Temporal\Internal\Transport\Server;
 use Temporal\Internal\Transport\ServerInterface;
 use Temporal\Internal\Workflow\Logger;
@@ -275,7 +277,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $plugins = $this->pluginRegistry->getPlugins(WorkerPluginInterface::class);
         $pipeline = Pipeline::prepare($plugins);
 
-        $this->payloadSizeLimiter = PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter);
+        $this->payloadSizeLimiter = $this->createPayloadSizeLimiter();
 
         return $pipeline->with(function () use ($host): int {
             while ($msg = $host->waitBatch()) {
@@ -354,6 +356,19 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         return new Marshaller(new AttributeMapperFactory($reader));
     }
 
+    /**
+     * Ask the namespace for the limits it enforces, once the Worker starts.
+     *
+     * The lookup is an RPC, so it is bounded and never fatal: without it the Worker sends what it
+     * produces and the server rejects what it must.
+     */
+    protected function createPayloadSizeLimiter(): ?PayloadSizeLimiter
+    {
+        return $this->workflowClient === null
+            ? null
+            : PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter, $this->env);
+    }
+
     private function boot(ServiceCredentials $credentials): void
     {
         $this->reader = $this->createReader();
@@ -405,10 +420,10 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
      * Measure the commands the Worker is about to send, so payloads the server is known to reject
      * fail the Workflow Task instead of being uploaded.
      *
-     * @param iterable<\Temporal\Worker\Transport\Command\CommandInterface> $commands
-     * @return iterable<\Temporal\Worker\Transport\Command\CommandInterface>
+     * @param iterable<CommandInterface> $commands
+     * @return iterable<CommandInterface>
      *
-     * @throws \Temporal\Exception\PayloadSizeExceededException
+     * @throws PayloadSizeExceededException
      */
     private function limitPayloads(iterable $commands, array $headers): iterable
     {
@@ -419,10 +434,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $taskQueue = $headers[self::HEADER_TASK_QUEUE] ?? null;
         $worker = \is_string($taskQueue) ? $this->queues->find($taskQueue) : null;
 
-        // A Worker may leave the enforcement to RoadRunner
-        return $worker !== null && $worker->getOptions()->disablePayloadErrorLimit
+        // Only what a Worker produces is measured: a batch of no Worker, such as the registration
+        // handshake, never reaches the server. A Worker may also leave the enforcement to RoadRunner.
+        return $worker === null || $worker->getOptions()->disablePayloadErrorLimit
             ? $commands
-            : $this->payloadSizeLimiter->check($commands);
+            : $this->payloadSizeLimiter->enforce($commands);
     }
 
     private function onRequest(ServerRequestInterface $request, array $headers): PromiseInterface

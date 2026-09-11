@@ -19,7 +19,9 @@ use Temporal\Internal\Transport\Request\UpsertMemo;
 use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
 use Temporal\Internal\Transport\Request\UpsertTypedSearchAttributes;
 use Temporal\Worker\Transport\Command\CommandInterface;
+use Temporal\Worker\Transport\Command\Client\UpdateResponse;
 use Temporal\Worker\Transport\Command\RequestInterface;
+use Temporal\Worker\Transport\Command\SuccessResponseInterface;
 
 /**
  * Sizes the server measures in a command a Worker sends.
@@ -34,10 +36,22 @@ final class CommandPayloads
     /**
      * Payload sizes of a command, by the limit they are measured against.
      *
+     * Converting a value costs as much as sending it, so a size nobody is going to read is not
+     * measured at all.
+     *
+     * @param bool $payloads Whether the payload size is needed.
+     * @param bool $memo Whether the memo size is needed.
+     *
      * @return array{payloads: int, memo: int}
      */
-    public static function sizes(CommandInterface $command, DataConverterInterface $converter): array
-    {
+    public static function sizes(
+        CommandInterface $command,
+        DataConverterInterface $converter,
+        bool $payloads = true,
+        bool $memo = true,
+    ): array {
+        $withPayloads = $payloads;
+        $withMemo = $memo;
         $payloads = 0;
         $memo = 0;
 
@@ -57,18 +71,23 @@ final class CommandPayloads
                 UpsertTypedSearchAttributes::NAME => self::valuesOf($options['search_attributes'] ?? null),
                 default => null,
             };
-            $fields === null or $payloads += self::mapSize($fields, $converter);
+            $fields === null || !$withPayloads or $payloads += self::mapSize($fields, $converter);
 
             // An upserted Memo is measured against the memo limit as well, as the server does,
             // and a Child Workflow carries a Memo of its own
-            $memo += self::memoSize(match ($command->getName()) {
+            $withMemo and $memo += self::memoSize(match ($command->getName()) {
                 default => $options['options']['Memo'] ?? null,
                 UpsertMemo::NAME => $options['memo'] ?? null,
             }, $converter);
         }
 
-        $values = \method_exists($command, 'getPayloads') ? $command->getPayloads() : null;
-        $values instanceof ValuesInterface and $payloads += self::valuesSize($values, $converter);
+        $values = match (true) {
+            $command instanceof RequestInterface,
+            $command instanceof SuccessResponseInterface => $command->getPayloads(),
+            $command instanceof UpdateResponse => $command->getPayloads(),
+            default => null,
+        };
+        $values === null || !$withPayloads or $payloads += self::valuesSize($values, $converter);
 
         return ['payloads' => $payloads, 'memo' => $memo];
     }

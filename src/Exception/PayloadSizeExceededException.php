@@ -12,12 +12,10 @@ declare(strict_types=1);
 namespace Temporal\Exception;
 
 /**
- * Payloads larger than the error limit are not sent to the server at all.
+ * Payloads larger than the limit the namespace enforces are not sent to the server at all:
+ * the Workflow Task fails instead, so the Workflow can be fixed and the task retried.
  *
- * A Client request throws it instead of being sent; a Workflow Task fails instead of being
- * completed with the oversized payloads, so the Workflow can be fixed and the task retried.
- *
- * @experimental This API is experimental and may change in the future.
+ * @internal
  */
 final class PayloadSizeExceededException extends TemporalException
 {
@@ -36,10 +34,13 @@ final class PayloadSizeExceededException extends TemporalException
         public readonly int $size,
         public readonly int $limit,
     ) {
+        // The message is all a Worker can report: RoadRunner sends it on as a string
         parent::__construct(\sprintf(
-            '[%s] Attempted to upload %s with size that exceeded the error limit.',
+            '[%s] Attempted to upload %s with size that exceeded the error limit. Size: %d, limit: %d.',
             self::MESSAGE_CODE,
             $kind,
+            $size,
+            $limit,
         ));
     }
 }

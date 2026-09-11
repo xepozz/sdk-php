@@ -286,8 +286,8 @@ class WorkerOptions
      * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
      * and the server rejects the oversized payload instead.
      *
-     * The validation itself is performed by RoadRunner, so the error is reported in its log, and
-     * the option has no effect on a RoadRunner build that does not support it yet.
+     * The limits are the ones the namespace reports. They are enforced by the SDK for the
+     * commands a Workflow produces, and by RoadRunner for everything it sends on its own.
      *
      * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
      *
