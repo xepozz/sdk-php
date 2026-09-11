@@ -31,6 +31,10 @@ use Temporal\Worker\Transport\Command\RequestInterface;
  * Responses to Queries and Updates are left to the server: the Go SDK turns an oversized Query
  * result into a failed Query rather than failing the task, which a Worker cannot do from here.
  *
+ * Only the payloads a Workflow produces are measured. A memo and the Search Attributes travel as
+ * raw values and are converted by RoadRunner, so the size measured here is an estimate: it is
+ * good enough to warn about, but not to refuse to send. Those the server rejects on its own.
+ *
  * @internal
  */
 final class PayloadSizeLimiter
@@ -42,11 +46,9 @@ final class PayloadSizeLimiter
 
     /**
      * @param int $payloadSize Limit in bytes, zero when the namespace enforces none.
-     * @param int $memoSize Limit in bytes, zero when the namespace enforces none.
      */
     public function __construct(
         private readonly int $payloadSize,
-        private readonly int $memoSize,
         private readonly DataConverterInterface $converter,
         private readonly EnvironmentInterface $env,
     ) {}
@@ -78,11 +80,8 @@ final class PayloadSizeLimiter
         }
 
         $payloadSize = (int) $limits?->getBlobSizeLimitError();
-        $memoSize = (int) $limits?->getMemoSizeLimitError();
 
-        return $payloadSize > 0 || $memoSize > 0
-            ? new self($payloadSize, $memoSize, $converter, $env)
-            : null;
+        return $payloadSize > 0 ? new self($payloadSize, $converter, $env) : null;
     }
 
     /**
@@ -106,29 +105,13 @@ final class PayloadSizeLimiter
                 continue;
             }
 
-            $sizes = CommandPayloads::sizes(
-                $command,
-                $this->converter,
-                payloads: $this->payloadSize > 0,
-                memo: $this->memoSize > 0,
-            );
+            $size = CommandPayloads::wireSize($command, $this->converter);
 
-            $this->assert('payloads', $sizes['payloads'], $this->payloadSize);
-            $this->assert('memo', $sizes['memo'], $this->memoSize);
+            if ($size > $this->payloadSize) {
+                throw new PayloadSizeExceededException('payloads', $size, $this->payloadSize);
+            }
         }
 
         return $commands;
-    }
-
-    /**
-     * @param non-empty-string $kind
-     *
-     * @throws PayloadSizeExceededException
-     */
-    private function assert(string $kind, int $size, int $limit): void
-    {
-        if ($limit > 0 && $size > $limit) {
-            throw new PayloadSizeExceededException($kind, $size, $limit);
-        }
     }
 }

@@ -111,7 +111,7 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
         (new \ReflectionProperty(WorkerFactory::class, 'payloadSizeLimiter'))->setValue(
             $factory,
             $withLimiter
-                ? new PayloadSizeLimiter(1024, 1024, DataConverter::createDefault(), new Environment())
+                ? new PayloadSizeLimiter(1024, DataConverter::createDefault(), new Environment())
                 : null,
         );
 

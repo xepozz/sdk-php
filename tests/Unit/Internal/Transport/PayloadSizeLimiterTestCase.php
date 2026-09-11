@@ -24,6 +24,7 @@ use Temporal\DataConverter\EncodedValues;
 use Temporal\Exception\PayloadSizeExceededException;
 use Temporal\Interceptor\Header;
 use Temporal\Internal\Queue\ArrayQueue;
+use Temporal\Internal\Support\CommandPayloads;
 use Temporal\Internal\Transport\PayloadSizeLimiter;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
@@ -121,19 +122,37 @@ final class PayloadSizeLimiterTestCase extends TestCase
         self::assertCount(1, $limiter->enforce([$this->activity(2000)]));
     }
 
-    public function testMemoUsesTheMemoLimit(): void
+    public function testAMemoIsLeftToTheServer(): void
     {
-        $this->expectException(PayloadSizeExceededException::class);
+        // RoadRunner converts a memo with its own converter, so the size measured here is an
+        // estimate: it may warn, but it may not refuse to send
+        $commands = [new UpsertMemo(['key' => \str_repeat('x', 200_000)])];
 
-        // The payload limit is large enough, but the memo limit is not
-        $this->limiter(payloadSize: 1024 * 1024, memoSize: 1024)
-            ->enforce([new UpsertMemo(['key' => \str_repeat('x', 2000)])]);
+        self::assertSame($commands, $this->limiter(payloadSize: 1024)->enforce($commands));
+    }
+
+    public function testExactlyTheLimitIsSent(): void
+    {
+        $command = $this->activity(100);
+        $size = CommandPayloads::wireSize($command, DataConverter::createDefault());
+
+        self::assertCount(1, $this->limiter(payloadSize: $size)->enforce([$command]));
+    }
+
+    public function testTheMessageNamesWhatWasMeasured(): void
+    {
+        // The message is the whole diagnostic an operator gets
+        $this->expectExceptionMessage(
+            '[TMPRL1103] Attempted to upload payloads with size that exceeded the error limit.',
+        );
+
+        $this->limiter(payloadSize: 1024)->enforce([$this->activity(2000)]);
     }
 
     public function testLimitsComeFromTheNamespace(): void
     {
         $limiter = PayloadSizeLimiter::fromClient(
-            $this->client(2048, 64),
+            $this->client(2048),
             DataConverter::createDefault(),
             new Environment(),
         );
@@ -151,7 +170,7 @@ final class PayloadSizeLimiterTestCase extends TestCase
     public function testTheNamespaceIsAskedWithABoundedTimeout(): void
     {
         $seen = null;
-        $client = $this->client(2048, 0, static function (ContextInterface $ctx) use (&$seen): void {
+        $client = $this->client(2048, static function (ContextInterface $ctx) use (&$seen): void {
             $seen = $ctx->getDeadline();
         });
 
@@ -163,34 +182,39 @@ final class PayloadSizeLimiterTestCase extends TestCase
     public function testNamespaceWithoutLimitsIsNotEnforced(): void
     {
         self::assertNull(
-            PayloadSizeLimiter::fromClient($this->client(0, 0), DataConverter::createDefault(), new Environment()),
+            PayloadSizeLimiter::fromClient($this->client(0), DataConverter::createDefault(), new Environment()),
         );
     }
 
     public function testUnreachableNamespaceLeavesTheWorkerAsItWas(): void
     {
+        $serviceClient = $this->createMock(ServiceClientInterface::class);
+        $serviceClient->method('getContext')->willReturn(Context::default());
+        $serviceClient->method('DescribeNamespace')
+            ->willThrowException(new \RuntimeException('Namespace is unavailable'));
+
         $client = $this->createMock(WorkflowClientInterface::class);
-        $client->method('getServiceClient')->willThrowException(new \RuntimeException('Unavailable'));
+        $client->method('getServiceClient')->willReturn($serviceClient);
 
         self::assertNull(
             PayloadSizeLimiter::fromClient($client, DataConverter::createDefault(), new Environment()),
+            'A Worker that cannot ask sends what it produces, as it did before the limits existed.',
         );
     }
 
-    private function limiter(int $payloadSize = 0, int $memoSize = 0, bool $replaying = false): PayloadSizeLimiter
+    private function limiter(int $payloadSize, bool $replaying = false): PayloadSizeLimiter
     {
         $env = new Environment();
         $replaying and $env->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
 
-        return new PayloadSizeLimiter($payloadSize, $memoSize, DataConverter::createDefault(), $env);
+        return new PayloadSizeLimiter($payloadSize, DataConverter::createDefault(), $env);
     }
 
-    private function client(int $payloadSize, int $memoSize, ?\Closure $onCall = null): WorkflowClientInterface
+    private function client(int $payloadSize, ?\Closure $onCall = null): WorkflowClientInterface
     {
         $info = (new NamespaceInfo())->setLimits(
             (new NamespaceInfo\Limits())
-                ->setBlobSizeLimitError($payloadSize)
-                ->setMemoSizeLimitError($memoSize),
+                ->setBlobSizeLimitError($payloadSize),
         );
 
         $serviceClient = $this->createMock(ServiceClientInterface::class);

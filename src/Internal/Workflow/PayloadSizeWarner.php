@@ -55,7 +55,12 @@ final class PayloadSizeWarner
         }
 
         try {
-            $sizes = CommandPayloads::sizes($request, $this->converter);
+            $sizes = CommandPayloads::sizes(
+                $request,
+                $this->converter,
+                withPayloads: $this->limits->payloadSizeWarning !== null,
+                withMemo: $this->limits->memoSizeWarning !== null,
+            );
 
             $this->warn($request->getName(), 'payloads', $sizes['payloads'], $this->limits->payloadSizeWarning);
             $this->warn($request->getName(), 'memo', $sizes['memo'], $this->limits->memoSizeWarning);
