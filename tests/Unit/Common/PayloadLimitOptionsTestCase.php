@@ -52,6 +52,54 @@ final class PayloadLimitOptionsTestCase extends TestCase
         self::assertNull((new \ReflectionProperty(WorkerOptions::class, 'payloadLimits'))->getValue($options));
     }
 
+    public function testErrorLimitsAreOffByDefault(): void
+    {
+        $options = PayloadLimitOptions::new();
+
+        self::assertNull($options->payloadSizeError);
+        self::assertNull($options->memoSizeError);
+        self::assertFalse($options->hasErrorLimits());
+    }
+
+    public function testErrorLimitsAreCarriedByEveryWither(): void
+    {
+        $options = PayloadLimitOptions::new()
+            ->withPayloadSizeError(2048)
+            ->withMemoSizeError(64)
+            ->withPayloadSizeWarning(1024)
+            ->withMemoSizeWarning(32);
+
+        self::assertSame(2048, $options->payloadSizeError);
+        self::assertSame(64, $options->memoSizeError);
+        self::assertSame(1024, $options->payloadSizeWarning);
+        self::assertSame(32, $options->memoSizeWarning);
+        self::assertTrue($options->hasErrorLimits());
+    }
+
+    public function testErrorLimitsCanBeDropped(): void
+    {
+        $options = PayloadLimitOptions::new()->withPayloadSizeError(2048)->withoutErrorLimits();
+
+        self::assertFalse($options->hasErrorLimits());
+        self::assertSame(512 * 1024, $options->payloadSizeWarning);
+    }
+
+    public function testErrorLimitsAloneKeepTheOptionsEnabled(): void
+    {
+        $options = PayloadLimitOptions::disabled()->withPayloadSizeError(2048);
+
+        self::assertTrue($options->isEnabled());
+        self::assertFalse(PayloadLimitOptions::disabled()->hasErrorLimits());
+    }
+
+    #[DataProvider('nonPositiveValues')]
+    public function testErrorLimitsRejectNonPositive(int $value): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        PayloadLimitOptions::new()->withPayloadSizeError($value);
+    }
+
     public function testWithersAreImmutable(): void
     {
         $options = PayloadLimitOptions::new();

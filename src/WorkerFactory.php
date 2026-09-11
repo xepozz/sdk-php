@@ -46,6 +46,7 @@ use Temporal\Internal\Transport\Client;
 use Temporal\Internal\Transport\ClientInterface;
 use Temporal\Internal\Transport\Router;
 use Temporal\Internal\Transport\RouterInterface;
+use Temporal\Internal\Transport\PayloadSizeLimiter;
 use Temporal\Internal\Transport\Server;
 use Temporal\Internal\Transport\ServerInterface;
 use Temporal\Internal\Workflow\Logger;
@@ -384,7 +385,25 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
 
         $this->tick();
 
-        return $this->codec->encode($this->responses);
+        return $this->codec->encode($this->limitPayloads($this->responses, $headers));
+    }
+
+    /**
+     * Measure the commands the Worker is about to send, so payloads the server is known to reject
+     * fail the Workflow Task instead of being uploaded.
+     *
+     * @param iterable<\Temporal\Worker\Transport\Command\CommandInterface> $commands
+     * @return iterable<\Temporal\Worker\Transport\Command\CommandInterface>
+     *
+     * @throws \Temporal\Exception\PayloadSizeExceededException
+     */
+    private function limitPayloads(iterable $commands, array $headers): iterable
+    {
+        $taskQueue = $headers[self::HEADER_TASK_QUEUE] ?? null;
+        $worker = \is_string($taskQueue) ? $this->queues->find($taskQueue) : null;
+        $limiter = $worker === null ? null : PayloadSizeLimiter::forWorker($worker, $this->converter);
+
+        return $limiter?->check($commands) ?? $commands;
     }
 
     private function onRequest(ServerRequestInterface $request, array $headers): PromiseInterface

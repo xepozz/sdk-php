@@ -53,6 +53,7 @@ use Temporal\Api\Workflowservice\V1\TerminateWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Exception\PayloadSizeExceededException;
 use Temporal\Internal\Client\PayloadSizeChecker;
 use Temporal\Tests\Unit\Client\Stub\LoggerSpy;
 
@@ -296,6 +297,46 @@ final class PayloadSizeCheckerTestCase extends TestCase
         );
 
         self::assertSame([], $this->logger->records);
+    }
+
+    public function testRequestAboveTheErrorLimitIsNotSent(): void
+    {
+        try {
+            $this->check(
+                (new StartWorkflowExecutionRequest())->setInput(self::payloads(2000)),
+                'StartWorkflowExecution',
+                PayloadLimitOptions::new()->withPayloadSizeError(1024),
+            );
+            self::fail('The oversized request was let through.');
+        } catch (PayloadSizeExceededException $e) {
+            self::assertStringContainsString('[TMPRL1103]', $e->getMessage());
+            self::assertStringContainsString('error limit', $e->getMessage());
+            self::assertSame(1024, $e->limit);
+        }
+
+        self::assertSame([], $this->logger->records, 'The error replaces the warning.');
+    }
+
+    public function testMemoAboveItsErrorLimitIsNotSent(): void
+    {
+        $this->expectException(PayloadSizeExceededException::class);
+
+        $this->check(
+            (new StartWorkflowExecutionRequest())->setMemo(self::memo(2000)),
+            'StartWorkflowExecution',
+            PayloadLimitOptions::new()->withMemoSizeError(1024),
+        );
+    }
+
+    public function testBelowTheErrorLimitOnlyWarns(): void
+    {
+        $this->check(
+            (new StartWorkflowExecutionRequest())->setInput(self::payloads(2000)),
+            'StartWorkflowExecution',
+            new PayloadLimitOptions(1024, 1024, 1024 * 1024, 1024 * 1024),
+        );
+
+        self::assertSame(['payloads'], \array_column($this->logger->records, 'kind'));
     }
 
     public function testKeepsSilentBelowTheLimit(): void

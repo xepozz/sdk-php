@@ -35,6 +35,7 @@ use Temporal\Api\Workflowservice\V1\TerminateWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Exception\PayloadSizeExceededException;
 use Temporal\Internal\Support\MessageSize;
 
 /**
@@ -79,8 +80,11 @@ final class PayloadSizeChecker
 
         try {
             $this->inspect($method, $request);
+        } catch (PayloadSizeExceededException $e) {
+            // Payloads above the error limit are not sent at all
+            throw $e;
         } catch (\Throwable) {
-            // Measuring is an observability feature: it must never break the RPC call
+            // Measuring is otherwise an observability feature: it must never break the RPC call
         }
     }
 
@@ -145,11 +149,10 @@ final class PayloadSizeChecker
                     return;
                 }
 
-                $this->warn(
+                $this->measure(
                     $method,
                     'payloads',
                     MessageSize::ofMemo($request->getMemo()) + MessageSize::ofPayloads($action->getInput()),
-                    $this->limits->payloadSizeWarning,
                 );
                 // Nothing nested in the request is measured again: the server has no separate
                 // check for the memo of the action, and the other SDKs do not report it either
@@ -192,12 +195,30 @@ final class PayloadSizeChecker
 
     private function payloads(string $method, ?Payloads $payloads): void
     {
-        $this->warn($method, 'payloads', MessageSize::ofPayloads($payloads), $this->limits->payloadSizeWarning);
+        $this->measure($method, 'payloads', MessageSize::ofPayloads($payloads));
     }
 
     private function memo(string $method, ?Memo $memo): void
     {
-        $this->warn($method, 'memo', MessageSize::ofMemo($memo), $this->limits->memoSizeWarning);
+        $this->measure($method, 'memo', MessageSize::ofMemo($memo));
+    }
+
+    /**
+     * @param non-empty-string $kind
+     *
+     * @throws PayloadSizeExceededException When the size is above the error limit.
+     */
+    private function measure(string $method, string $kind, int $size): void
+    {
+        [$warning, $error] = $kind === 'memo'
+            ? [$this->limits->memoSizeWarning, $this->limits->memoSizeError]
+            : [$this->limits->payloadSizeWarning, $this->limits->payloadSizeError];
+
+        if ($error !== null && $size > $error) {
+            throw new PayloadSizeExceededException($kind, $size, $error);
+        }
+
+        $this->warn($method, $kind, $size, $warning);
     }
 
     /**
