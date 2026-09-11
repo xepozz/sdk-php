@@ -126,9 +126,9 @@ class WorkflowClient implements WorkflowClientInterface
         $this->interceptorPipeline = $provider->getPipeline(WorkflowClientCallsInterceptor::class);
         $this->reader = new WorkflowReader($this->createReader());
 
-        // Warn about oversized payloads
+        // Warn about oversized payloads, unless the service client carries its own limits
         if ($serviceClient instanceof BaseClient) {
-            $serviceClient = $serviceClient->withPayloadLimits(
+            $serviceClient = $serviceClient->withDefaultPayloadLimits(
                 $this->clientOptions->payloadLimits ?? PayloadLimitOptions::new(),
                 $logger ?? new StderrLogger(),
             );

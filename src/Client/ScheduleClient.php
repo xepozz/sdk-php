@@ -98,9 +98,9 @@ final class ScheduleClient implements ScheduleClientInterface
         );
         $this->protoConverter = new ProtoToArrayConverter($this->converter);
 
-        // Warn about oversized payloads
+        // Warn about oversized payloads, unless the service client carries its own limits
         if ($serviceClient instanceof BaseClient) {
-            $serviceClient = $serviceClient->withPayloadLimits(
+            $serviceClient = $serviceClient->withDefaultPayloadLimits(
                 $this->clientOptions->payloadLimits ?? PayloadLimitOptions::new(),
                 $logger ?? new StderrLogger(),
             );

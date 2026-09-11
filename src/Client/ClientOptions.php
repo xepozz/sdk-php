@@ -40,7 +40,9 @@ class ClientOptions
     /**
      * Payload size limits at which the client logs a warning about the requests it sends.
      *
-     * NULL means the default limits, see {@see PayloadLimitOptions::new()}.
+     * NULL means the default limits, see {@see PayloadLimitOptions::new()}. The warnings are on
+     * by default and go to STDERR unless a logger is passed to the {@see \Temporal\Client\WorkflowClient};
+     * pass {@see PayloadLimitOptions::disabled()} to turn them off.
      *
      * @experimental This API is experimental and may change in the future.
      */

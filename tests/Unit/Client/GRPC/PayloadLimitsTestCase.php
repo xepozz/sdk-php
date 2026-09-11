@@ -176,6 +176,31 @@ final class PayloadLimitsTestCase extends TestCase
         self::assertCount(1, $this->records);
     }
 
+    public function testExplicitLimitsOfTheServiceClientSurviveTheClient(): void
+    {
+        // The Client must not override what the service client was configured with
+        $serviceClient = $this->createClient()->withoutPayloadLimits();
+
+        $client = new WorkflowClient($serviceClient);
+
+        self::assertNull($this->checkerOf($client->getServiceClient()));
+    }
+
+    public function testExplicitLoggerOfTheServiceClientSurvivesTheClient(): void
+    {
+        $serviceClient = $this->createClient()
+            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger());
+
+        $client = new WorkflowClient($serviceClient);
+
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(2000));
+
+        // The limit of the service client, not the 512 KiB default of the Client
+        self::assertCount(1, $this->records);
+    }
+
     public function testClientIsImmutable(): void
     {
         $client = $this->createClient();

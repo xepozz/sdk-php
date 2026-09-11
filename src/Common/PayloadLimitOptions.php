@@ -18,7 +18,11 @@ namespace Temporal\Common;
  * on its own side, which is invisible to Temporal Cloud users. These limits make the SDK warn
  * about such payloads locally.
  *
+ * The Client and the Worker are configured separately, and both warn with the default limits
+ * unless they are told otherwise.
+ *
  * @see \Temporal\Client\ClientOptions::withPayloadLimits()
+ * @see \Temporal\Worker\WorkerOptions::withPayloadLimits()
  *
  * @experimental This API is experimental and may change in the future.
  */
@@ -48,6 +52,9 @@ final class PayloadLimitOptions
         self::assertPositive($memoSizeWarning, 'memoSizeWarning');
     }
 
+    /**
+     * @experimental This API is experimental and may change in the future.
+     */
     public static function new(): self
     {
         return new self();
@@ -55,6 +62,8 @@ final class PayloadLimitOptions
 
     /**
      * No warnings at all.
+     *
+     * @experimental This API is experimental and may change in the future.
      */
     public static function disabled(): self
     {
@@ -65,6 +74,8 @@ final class PayloadLimitOptions
      * Limit in bytes at which a payload size warning is logged.
      *
      * @param null|positive-int $bytes NULL disables the warning.
+     *
+     * @experimental This API is experimental and may change in the future.
      */
     public function withPayloadSizeWarning(?int $bytes): self
     {
@@ -75,6 +86,8 @@ final class PayloadLimitOptions
      * Limit in bytes at which an aggregate memo size warning is logged.
      *
      * @param null|positive-int $bytes NULL disables the warning.
+     *
+     * @experimental This API is experimental and may change in the future.
      */
     public function withMemoSizeWarning(?int $bytes): self
     {
@@ -83,6 +96,8 @@ final class PayloadLimitOptions
 
     /**
      * Whether any of the limits is set.
+     *
+     * @experimental This API is experimental and may change in the future.
      */
     public function isEnabled(): bool
     {

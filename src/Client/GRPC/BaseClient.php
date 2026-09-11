@@ -44,6 +44,11 @@ abstract class BaseClient implements GrpcClientInterface
     private ?PayloadSizeChecker $payloadSizeChecker = null;
 
     /**
+     * Whether the payload limits were configured explicitly, so a Client does not override them.
+     */
+    private bool $payloadLimitsConfigured = false;
+
+    /**
      * @param BaseStub|\Closure(): BaseStub $serviceClient Service Client or its factory
      *
      * @private Use static factory methods instead
@@ -178,7 +183,18 @@ abstract class BaseClient implements GrpcClientInterface
         $clone->payloadSizeChecker = $options->isEnabled()
             ? new PayloadSizeChecker($options, $logger)
             : null;
+        $clone->payloadLimitsConfigured = true;
         return $clone;
+    }
+
+    /**
+     * Apply the limits a Client is configured with, unless this instance already carries its own.
+     *
+     * @internal
+     */
+    final public function withDefaultPayloadLimits(PayloadLimitOptions $options, LoggerInterface $logger): static
+    {
+        return $this->payloadLimitsConfigured ? $this : $this->withPayloadLimits($options, $logger);
     }
 
     /**
@@ -190,6 +206,7 @@ abstract class BaseClient implements GrpcClientInterface
     {
         $clone = clone $this;
         $clone->payloadSizeChecker = null;
+        $clone->payloadLimitsConfigured = true;
         return $clone;
     }
 
