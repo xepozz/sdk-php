@@ -368,19 +368,23 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
     {
         $commands = $this->codec->decode($messages, $headers);
 
+        try {
+            foreach ($commands as $command) {
+                $this->env->update($command->getTickInfo());
 
-        foreach ($commands as $command) {
-            $this->env->update($command->getTickInfo());
+                if ($command instanceof ServerResponseInterface) {
+                    $this->client->dispatch($command);
+                    continue;
+                }
 
-            if ($command instanceof ServerResponseInterface) {
-                $this->client->dispatch($command);
-                continue;
+                $this->server->dispatch($command, $headers);
             }
 
-            $this->server->dispatch($command, $headers);
+            $this->tick();
+        } finally {
+            // The context must not outlive the activation. Not in tick(): a scope re-enters it.
+            Workflow::setCurrentContext(null);
         }
-
-        $this->tick();
 
         return $this->codec->encode($this->responses);
     }
