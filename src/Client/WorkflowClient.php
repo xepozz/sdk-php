@@ -13,6 +13,7 @@ namespace Temporal\Client;
 
 use Doctrine\Common\Annotations\Reader;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use JetBrains\PhpStorm\Deprecated;
 use Spiral\Attributes\AnnotationReader;
 use Spiral\Attributes\AttributeReader;
@@ -23,6 +24,7 @@ use Temporal\Api\Workflowservice\V1\CountWorkflowExecutionsRequest;
 use Temporal\Api\Workflowservice\V1\GetWorkflowExecutionHistoryRequest;
 use Temporal\Api\Workflowservice\V1\ListWorkflowExecutionsRequest;
 use Temporal\Client\Common\ClientContextTrait;
+use Temporal\Common\Logger\StderrLogger;
 use Temporal\Client\Common\Paginator;
 use Temporal\Client\GRPC\BaseClient;
 use Temporal\Client\GRPC\ServiceClientInterface;
@@ -80,6 +82,7 @@ class WorkflowClient implements WorkflowClientInterface
     /**
      * @param null|LoggerInterface $logger Logger for client-side warnings, e.g. the payload size
      *        warning configured by {@see ClientOptions::withPayloadLimits()}.
+     *        Defaults to {@see StderrLogger}; pass {@see NullLogger} to silence the warnings.
      */
     public function __construct(
         ServiceClientInterface $serviceClient,
@@ -123,9 +126,12 @@ class WorkflowClient implements WorkflowClientInterface
         $this->interceptorPipeline = $provider->getPipeline(WorkflowClientCallsInterceptor::class);
         $this->reader = new WorkflowReader($this->createReader());
 
-        // Warn about oversized payloads when a logger is provided
-        if ($logger !== null && $this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
-            $serviceClient = $serviceClient->withPayloadLimits($this->clientOptions->payloadLimits, $logger);
+        // Warn about oversized payloads
+        if ($this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
+            $serviceClient = $serviceClient->withPayloadLimits(
+                $this->clientOptions->payloadLimits,
+                $logger ?? new StderrLogger(),
+            );
         }
 
         // Set Temporal-Namespace metadata

@@ -51,7 +51,7 @@ use Temporal\Internal\Transport\ServerInterface;
 use Temporal\Internal\Workflow\Logger;
 use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Environment\EnvironmentInterface;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 use Temporal\Worker\LoopInterface;
 use Temporal\Worker\ServiceCredentials;
 use Temporal\Worker\Transport\Codec\CodecInterface;

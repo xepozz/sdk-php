@@ -17,10 +17,12 @@ use Temporal\Api\Common\V1\Payload;
 use Temporal\Api\Common\V1\Payloads;
 use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\WorkflowServiceClient;
+use Temporal\Client\ClientOptions;
 use Temporal\Client\GRPC\Connection\ConnectionState;
 use Temporal\Client\GRPC\ContextInterface;
 use Temporal\Client\GRPC\ServiceClient;
 use Temporal\Client\PayloadLimitOptions;
+use Temporal\Client\WorkflowClient;
 use Temporal\Interceptor\GrpcClientInterceptor;
 use Temporal\Internal\Interceptor\Pipeline;
 
@@ -57,6 +59,37 @@ final class PayloadLimitsTestCase extends TestCase
         $client = $this->createClient()->withPayloadLimits(null, $this->createLogger());
 
         $client->testCall($this->request(2000));
+
+        self::assertSame([], $this->records);
+    }
+
+    public function testWorkflowClientEnablesWarnings(): void
+    {
+        $client = new WorkflowClient(
+            $this->createClient(),
+            (new ClientOptions())->withPayloadLimits(new PayloadLimitOptions(1024, 1024)),
+            logger: $this->createLogger(),
+        );
+
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(2000));
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
+    }
+
+    public function testWorkflowClientRespectsDisabledLimits(): void
+    {
+        $client = new WorkflowClient(
+            $this->createClient(),
+            (new ClientOptions())->withPayloadLimits(null),
+            logger: $this->createLogger(),
+        );
+
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(2000));
 
         self::assertSame([], $this->records);
     }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Temporal\Worker\Logger;
+namespace Temporal\Common\Logger;
 
 use Psr\Log\LoggerInterface;
 use Psr\Log\LoggerTrait;

@@ -32,7 +32,7 @@ use Temporal\Tests\Acceptance\App\Runtime\FatalHandler;
 use Temporal\Tests\Acceptance\App\Runtime\Feature;
 use Temporal\Tests\Acceptance\App\Runtime\State;
 use Temporal\Tests\Acceptance\App\RuntimeBuilder;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 use Temporal\Tests\Acceptance\App\Transport\RecordingHost;
 use Temporal\Worker\Transport\RoadRunner;
 use Temporal\Worker\WorkerFactoryInterface;
