@@ -128,6 +128,7 @@ final class InvokeQuery extends WorkflowProcessAwareRoute
                             ->setCurrentDetails((string) $context->getCurrentDetails()),
                     ]);
 
+                    $context->warnAboutPayloadSize('QueryResult', $result);
                     $resolver->resolve($result);
                 } catch (\Throwable $e) {
                     $resolver->reject($e);
@@ -144,6 +145,7 @@ final class InvokeQuery extends WorkflowProcessAwareRoute
                 try {
                     $result = EncodedValues::fromValues([$context->getStackTrace()]);
 
+                    $context->warnAboutPayloadSize('QueryResult', $result);
                     $resolver->resolve($result);
                 } catch (\Throwable $e) {
                     $resolver->reject($e);
@@ -162,6 +164,7 @@ final class InvokeQuery extends WorkflowProcessAwareRoute
                         $context->getEnhancedStackTrace(),
                     ]);
 
+                    $context->warnAboutPayloadSize('QueryResult', $result);
                     $resolver->resolve($result);
                 } catch (\Throwable $e) {
                     $resolver->reject($e);

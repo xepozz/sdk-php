@@ -14,6 +14,7 @@ namespace Temporal\Tests\Unit\WorkflowContext;
 use Psr\Log\AbstractLogger;
 use Temporal\Activity\ActivityOptions;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Common\SearchAttributes\SearchAttributeKey;
 use Temporal\DataConverter\DataConverter;
 use Temporal\Api\Common\V1\Payload;
 use Temporal\DataConverter\DataConverterInterface;
@@ -25,6 +26,7 @@ use Temporal\Internal\Transport\Request\ExecuteChildWorkflow;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
 use Temporal\Internal\Transport\Request\UpsertMemo;
 use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
+use Temporal\Internal\Transport\Request\UpsertTypedSearchAttributes;
 use Temporal\Internal\Workflow\PayloadSizeWarner;
 use Temporal\Tests\Activity\SimpleActivity;
 use Temporal\Tests\Unit\AbstractUnit;
@@ -60,6 +62,25 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertGreaterThan(2000, $context['size']);
     }
 
+    public function testExactlyTheLimitIsNotReported(): void
+    {
+        // The server rejects what is larger than the limit, so the limit itself is still fine
+        $payloads = EncodedValues::fromValues(['x']);
+        $payloads->setDataConverter(DataConverter::createDefault());
+        $size = \strlen($payloads->toPayloads()->serializeToString());
+
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions($size, $size),
+            DataConverter::createDefault(),
+            new Environment(),
+            $this->spyLogger(),
+        );
+
+        $warner->checkValues('QueryResult', EncodedValues::fromValues(['x']));
+
+        self::assertSame([], $this->records);
+    }
+
     public function testKeepsSilentBelowTheLimit(): void
     {
         $this->runWorkflowWithArgument('small');
@@ -69,14 +90,11 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
 
     public function testReplayedCommandIsNotMeasuredAtAll(): void
     {
-        // A raw logger, so only the warner's own replay guard can keep it silent
-        $environment = new Environment();
-        $environment->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
-
+        // A raw logger and a working converter, so only the replay guard can keep it silent
         $warner = new PayloadSizeWarner(
             new PayloadLimitOptions(1024, 1024),
-            $this->throwingConverter(),
-            $environment,
+            DataConverter::createDefault(),
+            self::replayingEnvironment(),
             $this->spyLogger(),
         );
 
@@ -142,15 +160,56 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame('ExecuteActivity', $this->records[0][1]['command']);
     }
 
-    public function testUpsertedMemoIsMeasuredAsAPayloadMap(): void
+    public function testUpsertedMemoIsMeasuredAgainstBothLimits(): void
     {
+        // The server checks the same command as a payload map and as a Memo, and so does Go
         $this->warner()->check(new UpsertMemo(['key' => \str_repeat('x', 2000)]));
 
-        self::assertCount(1, $this->records);
+        self::assertCount(2, $this->records);
         self::assertStringContainsString('payloads', $this->records[0][0]);
+        self::assertStringContainsString('memo', $this->records[1][0]);
         self::assertSame('UpsertMemo', $this->records[0][1]['command']);
         // The key length plus the data of the payload, the way the server counts it
         self::assertSame(\strlen('key') + 2002, $this->records[0][1]['size']);
+    }
+
+    public function testUpsertedMemoUsesTheMemoLimitOfItsOwn(): void
+    {
+        // The payload limit is large enough, but the memo limit is not
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions(1024 * 1024, 1024),
+            DataConverter::createDefault(),
+            new Environment(),
+            $this->spyLogger(),
+        );
+
+        $warner->check(new UpsertMemo(['key' => \str_repeat('x', 2000)]));
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('memo', $this->records[0][0]);
+    }
+
+    public function testUpsertedTypedSearchAttributesAreMeasured(): void
+    {
+        $request = new UpsertTypedSearchAttributes(
+            [SearchAttributeKey::forText('Attr')->valueSet(\str_repeat('x', 2000))],
+        );
+
+        $this->warner()->check($request);
+
+        self::assertCount(1, $this->records);
+        self::assertSame('UpsertWorkflowTypedSearchAttributes', $this->records[0][1]['command']);
+    }
+
+    public function testUnsetTypedSearchAttributeHasNothingToMeasure(): void
+    {
+        $request = new UpsertTypedSearchAttributes(
+            [SearchAttributeKey::forText('Attr')->valueUnset()],
+        );
+
+        $this->warner()->check($request);
+
+        self::assertSame([], $this->records);
     }
 
     public function testUpsertedSearchAttributesAreMeasuredAsAPayloadMap(): void
@@ -201,13 +260,10 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
 
     public function testReplayedHandlerResultIsNotMeasured(): void
     {
-        $environment = new Environment();
-        $environment->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
-
         $warner = new PayloadSizeWarner(
             new PayloadLimitOptions(1024, 1024),
-            $this->throwingConverter(),
-            $environment,
+            DataConverter::createDefault(),
+            self::replayingEnvironment(),
             $this->spyLogger(),
         );
 
@@ -236,6 +292,74 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame(1, $attempts, 'The warning was attempted and its failure was swallowed.');
     }
 
+    public function testQueryResultIsMeasuredByTheRouter(): void
+    {
+        $logger = $this->spyLogger();
+        $worker = $this->factory->newWorker(
+            options: WorkerOptions::new()->withPayloadLimits(new PayloadLimitOptions(1024, 1024)),
+            logger: $logger,
+        );
+        $worker->registerWorkflowObject(
+            new
+            #[Workflow\WorkflowInterface]
+            class {
+                #[WorkflowMethod(name: 'QueriedWorkflow')]
+                public function handler(): iterable
+                {
+                    return yield Workflow::await(static fn(): bool => false);
+                }
+
+                #[Workflow\QueryMethod(name: 'big')]
+                public function big(): string
+                {
+                    return \str_repeat('x', 2000);
+                }
+            }
+        );
+
+        $worker->runWorkflow('QueriedWorkflow');
+        $worker->sendQuery('QueriedWorkflow', 'big');
+        $this->factory->run($worker);
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
+        self::assertSame('QueryResult', $this->records[0][1]['command']);
+    }
+
+    public function testUpdateResultIsMeasuredByTheRouter(): void
+    {
+        $logger = $this->spyLogger();
+        $worker = $this->factory->newWorker(
+            options: WorkerOptions::new()->withPayloadLimits(new PayloadLimitOptions(1024, 1024)),
+            logger: $logger,
+        );
+        $worker->registerWorkflowObject(
+            new
+            #[Workflow\WorkflowInterface]
+            class {
+                #[WorkflowMethod(name: 'UpdatedWorkflow')]
+                public function handler(): iterable
+                {
+                    return yield Workflow::await(static fn(): bool => false);
+                }
+
+                #[Workflow\UpdateMethod(name: 'big')]
+                public function big(): string
+                {
+                    return \str_repeat('x', 2000);
+                }
+            }
+        );
+
+        $worker->runWorkflow('UpdatedWorkflow');
+        $worker->sendUpdate('UpdatedWorkflow', 'big');
+        $this->factory->run($worker);
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
+        self::assertSame('UpdateCompleted', $this->records[0][1]['command']);
+    }
+
     public function testWarningCanBeDisabled(): void
     {
         $this->runWorkflowWithArgument(\str_repeat('x', 2000), null);
@@ -249,6 +373,14 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         $this->factory = WorkerFactoryMock::create();
 
         parent::setUp();
+    }
+
+    private static function replayingEnvironment(): Environment
+    {
+        $environment = new Environment();
+        $environment->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
+
+        return $environment;
     }
 
     private function activityRequest(int $size): ExecuteActivity

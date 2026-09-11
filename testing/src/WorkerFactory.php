@@ -103,11 +103,12 @@ class WorkerFactory extends \Temporal\WorkerFactory
                     $workerContext->getExceptionInterceptor() ?? ExceptionInterceptor::createDefault(),
                     $provider,
                     new Logger(
-                        $logger ?? new NullLogger(),
+                        $systemLogger = $logger ?? new NullLogger(),
                         $options->enableLoggingInReplay,
                         $taskQueue,
                     ),
                     $options->getPayloadLimits(),
+                    $systemLogger,
                 ),
                 $this->rpc,
             ),

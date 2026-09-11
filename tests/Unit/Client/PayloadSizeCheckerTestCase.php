@@ -283,6 +283,21 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertSame(2000 + self::PAYLOADS_OVERHEAD, $this->logger->records[0]['context']['size']);
     }
 
+    public function testExactlyTheLimitIsNotReported(): void
+    {
+        // The server rejects what is larger than the limit, so the limit itself is still fine
+        $payloads = self::payloads(100);
+        $size = \strlen($payloads->serializeToString());
+
+        $this->check(
+            (new StartWorkflowExecutionRequest())->setInput($payloads),
+            'StartWorkflowExecution',
+            new PayloadLimitOptions($size, $size),
+        );
+
+        self::assertSame([], $this->logger->records);
+    }
+
     public function testKeepsSilentBelowTheLimit(): void
     {
         $this->check((new StartWorkflowExecutionRequest())->setInput(self::payloads(100)), 'StartWorkflowExecution');

@@ -19,6 +19,7 @@ use Temporal\DataConverter\ValuesInterface;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
 use Temporal\Internal\Transport\Request\UpsertMemo;
 use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
+use Temporal\Internal\Transport\Request\UpsertTypedSearchAttributes;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
@@ -68,24 +69,25 @@ final class PayloadSizeWarner
 
             // Memo and Search Attribute upserts are maps measured key by key against the payload
             // limit, the way the server measures them
-            match ($name) {
-                UpsertMemo::NAME => $this->warn(
-                    $name,
-                    'payloads',
-                    $this->mapSize($options['memo'] ?? null),
-                    $this->limits->payloadSizeWarning,
-                ),
-                UpsertSearchAttributes::NAME => $this->warn(
-                    $name,
-                    'payloads',
-                    $this->mapSize($options['searchAttributes'] ?? null),
-                    $this->limits->payloadSizeWarning,
-                ),
+            $fields = match ($name) {
+                UpsertMemo::NAME => $options['memo'] ?? null,
+                UpsertSearchAttributes::NAME => $options['searchAttributes'] ?? null,
+                UpsertTypedSearchAttributes::NAME => self::valuesOf($options['search_attributes'] ?? null),
                 default => null,
             };
+            $fields === null or $this->warn(
+                $name,
+                'payloads',
+                $this->mapSize($fields),
+                $this->limits->payloadSizeWarning,
+            );
 
-            // A Child Workflow carries a Memo of its own, measured against the memo limit
-            $this->memo($name, $options['options']['Memo'] ?? null);
+            // An upserted Memo is measured against the memo limit as well, as the server does
+            $this->memo($name, match ($name) {
+                // A Child Workflow carries a Memo of its own
+                default => $options['options']['Memo'] ?? null,
+                UpsertMemo::NAME => $options['memo'] ?? null,
+            });
 
             $this->payloads($name, $request->getPayloads());
         } catch (\Throwable) {
@@ -110,6 +112,22 @@ final class PayloadSizeWarner
         } catch (\Throwable) {
             // See the comment in `check()`
         }
+    }
+
+    /**
+     * Values of a typed Search Attribute update, which carries the type and the operation
+     * next to the value itself. An `unset` update has no value to measure.
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function valuesOf(mixed $fields): array
+    {
+        $result = [];
+        foreach (self::fieldsOf($fields) as $key => $update) {
+            \is_array($update) && \array_key_exists('value', $update) and $result[$key] = $update['value'];
+        }
+
+        return $result;
     }
 
     /**
@@ -160,6 +178,9 @@ final class PayloadSizeWarner
     /**
      * Size of a map of payloads: the server sums the key lengths with the sizes of the payload
      * data, so the encoding overhead of the map itself is not counted.
+     *
+     * The values are converted with the Workflow's own converter, while the one RoadRunner uses
+     * produces the bytes that actually reach the server, so the size is an estimate.
      *
      * @param mixed $fields Raw values of the map, not converted yet.
      */

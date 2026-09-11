@@ -60,6 +60,11 @@ final class ServiceContainer
          * the warnings are off: this container has no opinion about the defaults.
          */
         public readonly ?PayloadLimitOptions $payloadLimits = null,
+        /**
+         * Logger of the Worker itself. Unlike {@see self::$logger} it carries no Workflow
+         * context, so it can be used outside of one.
+         */
+        public readonly ?LoggerInterface $systemLogger = null,
     ) {
         $this->workflows = new WorkflowCollection();
         $this->activities = new ActivityCollection();
@@ -74,6 +79,7 @@ final class ServiceContainer
         PipelineProvider $interceptorProvider,
         LoggerInterface $logger,
         ?PayloadLimitOptions $payloadLimits = null,
+        ?LoggerInterface $systemLogger = null,
     ): self {
         return new self(
             $worker,
@@ -87,6 +93,7 @@ final class ServiceContainer
             $interceptorProvider,
             $logger,
             $payloadLimits,
+            $systemLogger,
         );
     }
 }

@@ -147,12 +147,17 @@ final class PayloadSizeChecker
                 return;
 
             case $request instanceof CreateScheduleRequest:
-                // The server checks the memo of the request and the workflow input as one value
+                // The server checks the memo of the request and the workflow input as one value,
+                // and it supports no other action, so anything else is left to it
                 $action = $request->getSchedule()?->getAction()?->getStartWorkflow();
+                if ($action === null) {
+                    return;
+                }
+
                 $this->warn(
                     $method,
                     'payloads',
-                    self::sizeOf($request->getMemo()) + self::sizeOf($action?->getInput()),
+                    self::sizeOf($request->getMemo()) + self::sizeOf($action->getInput()),
                     $this->limits->payloadSizeWarning,
                 );
                 // Nothing nested in the request is measured again: the server has no separate

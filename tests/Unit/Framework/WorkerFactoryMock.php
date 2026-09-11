@@ -103,11 +103,12 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
                 $exceptionInterceptor ?? ExceptionInterceptor::createDefault(),
                 $interceptorProvider ?? new SimplePipelineProvider(),
                 new Logger(
-                    $logger ?? new StderrLogger(),
+                    $systemLogger = $logger ?? new StderrLogger(),
                     $options->enableLoggingInReplay,
                     $taskQueue,
                 ),
                 $options->getPayloadLimits(),
+                $systemLogger,
             ),
         );
         $this->queues->add($worker);
