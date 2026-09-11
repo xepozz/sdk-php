@@ -181,7 +181,7 @@ final class PayloadSizeLimiterTestCase extends TestCase
     {
         $seen = null;
         $client = $this->client(2048, static function (ContextInterface $ctx) use (&$seen): void {
-            $seen = $ctx->getDeadline();
+            $seen = $ctx;
         });
 
         $before = new \DateTimeImmutable();
@@ -189,7 +189,15 @@ final class PayloadSizeLimiterTestCase extends TestCase
 
         self::assertNotNull($seen, 'A Worker must not hang on a server that does not answer.');
         // Ten seconds, the default RPC timeout of the Go SDK
-        self::assertEqualsWithDelta(10, $seen->getTimestamp() - $before->getTimestamp(), 1);
+        self::assertEqualsWithDelta(10, $seen->getDeadline()?->getTimestamp() - $before->getTimestamp(), 1);
+
+        // The deadline must not move: a context built from a timeout recomputes it on every read,
+        // and the retry loop of the client then never reaches it
+        $first = $seen->getDeadline();
+        \usleep(200_000);
+
+        self::assertEquals($first, $seen->getDeadline(), 'The retries of the lookup would never end.');
+        self::assertSame(2, $seen->getRetryOptions()->maximumAttempts);
     }
 
     public function testNamespaceWithoutLimitsIsNotEnforced(): void

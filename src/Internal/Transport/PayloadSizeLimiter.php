@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Temporal\Internal\Transport;
 
 use Temporal\Api\Workflowservice\V1\DescribeNamespaceRequest;
+use Temporal\Client\Common\RpcRetryOptions;
 use Temporal\Client\WorkflowClientInterface;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\Exception\PayloadSizeExceededException;
@@ -45,6 +46,11 @@ final class PayloadSizeLimiter
     private const LOOKUP_TIMEOUT = 10;
 
     /**
+     * Attempts the namespace lookup may take. A Worker that cannot ask starts without the limits.
+     */
+    private const LOOKUP_ATTEMPTS = 2;
+
+    /**
      * @param int $payloadSize Limit in bytes, zero when the namespace enforces none.
      */
     public function __construct(
@@ -70,8 +76,13 @@ final class PayloadSizeLimiter
                 (new DescribeNamespaceRequest())
                     // The namespace the Client is bound to, as it sends it with every request
                     ->setNamespace((string) ($context->getMetadata()['Temporal-Namespace'][0] ?? '')),
-                // A Worker must not hang at startup on a server that does not answer
-                $context->withTimeout(self::LOOKUP_TIMEOUT),
+                // A Worker must not hang at startup on a server that does not answer. The deadline
+                // is absolute: a timeout is recomputed on every read, so the retries never end.
+                $context
+                    ->withDeadline(new \DateTimeImmutable('+' . self::LOOKUP_TIMEOUT . ' seconds'))
+                    ->withRetryOptions(
+                        RpcRetryOptions::new()->withMaximumAttempts(self::LOOKUP_ATTEMPTS),
+                    ),
             )->getNamespaceInfo()?->getLimits();
         } catch (\Throwable) {
             return null;
@@ -107,7 +118,7 @@ final class PayloadSizeLimiter
             $size = CommandPayloads::wireSize($command, $this->converter);
 
             if ($size > $this->payloadSize) {
-                throw new PayloadSizeExceededException('payloads', $size, $this->payloadSize);
+                throw new PayloadSizeExceededException($command->getName(), $size, $this->payloadSize);
             }
         }
 

@@ -292,7 +292,9 @@ class WorkerOptions
      * Search Attributes among it, is converted and sent by RoadRunner, which enforces its own.
      *
      * This option turns the check off in both: it is also sent to RoadRunner, where it has no
-     * effect on a build that does not support it yet.
+     * effect on a build that does not support it yet. When the check does trip, the Workflow Task
+     * fails with a `[TMPRL1103]` error and the server retries it: the Workflow keeps its history
+     * and carries on once the payload it produces fits.
      *
      * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
      *
@@ -826,6 +828,8 @@ class WorkerOptions
      * When FALSE, the worker validates the payload size before submitting it to the Temporal
      * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
      * and the server rejects the oversized payload instead.
+     *
+     * @see self::$disablePayloadErrorLimit for what the SDK enforces and what RoadRunner does.
      *
      * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
      *

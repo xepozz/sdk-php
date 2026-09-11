@@ -69,14 +69,27 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
 
     public function testTheResponsesOfABatchGoThroughTheLimit(): void
     {
-        // `dispatch()` is private and needs an encoded batch to be called for real, so the one
-        // line that connects the limit to the Worker loop is pinned from the source
-        $source = (string) \file_get_contents((string) (new \ReflectionClass(WorkerFactory::class))->getFileName());
+        $factory = new class(DataConverter::createDefault(), $this->createMock(RPCConnectionInterface::class)) extends WorkerFactory {
+            public bool $limited = false;
 
-        self::assertStringContainsString(
-            'encode($this->limitPayloads($this->responses, $headers, $replaying))',
-            $source,
-        );
+            protected function createPayloadSizeLimiter(): ?PayloadSizeLimiter
+            {
+                return null;
+            }
+
+            protected function encodeResponses(iterable $commands, array $headers, bool $replaying): string
+            {
+                $this->limited = true;
+
+                return parent::encodeResponses($commands, $headers, $replaying);
+            }
+        };
+
+        $method = new \ReflectionMethod(WorkerFactory::class, 'dispatch');
+        // An empty batch is enough: what is under test is that every batch takes this way out
+        $method->invoke($factory, '[]', ['taskQueue' => 'default']);
+
+        self::assertTrue($factory->limited, 'Every batch a Worker sends goes through the limit.');
     }
 
     /**

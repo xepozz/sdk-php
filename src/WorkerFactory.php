@@ -160,6 +160,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $this->boot($credentials ?? ServiceCredentials::create());
     }
 
+    /**
+     * @param null|WorkflowClient $client The Client a Worker asks for the payload size limits its
+     *        namespace enforces. Without one a Worker enforces no limit of its own and an
+     *        oversized payload is rejected by the server instead.
+     */
     public static function create(
         ?DataConverterInterface $converter = null,
         ?RPCConnectionInterface $rpc = null,
@@ -369,6 +374,21 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
             : PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter);
     }
 
+    /**
+     * Encode what the Worker is about to send, measured against the limits of the namespace.
+     *
+     * @param iterable<CommandInterface> $commands
+     * @param array<string, mixed> $headers
+     * @param bool $replaying Whether any part of the batch was replayed.
+     * @return non-empty-string The encoded responses to be sent back to the parent process.
+     *
+     * @throws PayloadSizeExceededException
+     */
+    protected function encodeResponses(iterable $commands, array $headers, bool $replaying): string
+    {
+        return $this->codec->encode($this->limitPayloads($commands, $headers, $replaying));
+    }
+
     private function boot(ServiceCredentials $credentials): void
     {
         $this->reader = $this->createReader();
@@ -416,7 +436,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
 
         $this->tick();
 
-        return $this->codec->encode($this->limitPayloads($this->responses, $headers, $replaying));
+        return $this->encodeResponses($this->responses, $headers, $replaying);
     }
 
     /**

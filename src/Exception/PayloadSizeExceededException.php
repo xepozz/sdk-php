@@ -25,19 +25,20 @@ final class PayloadSizeExceededException extends TemporalException
     private const MESSAGE_CODE = 'TMPRL1103';
 
     /**
-     * @param non-empty-string $kind What was measured, `payloads` or `memo`.
-     * @param int $size Size of the value, in bytes.
-     * @param int $limit Limit it exceeded, in bytes.
+     * @param non-empty-string $command Command that carried the payloads.
+     * @param int $size Size of the payloads, in bytes.
+     * @param int $limit Limit they exceeded, in bytes.
      */
     public function __construct(
-        string $kind,
+        string $command,
         public readonly int $size,
         public readonly int $limit,
     ) {
         parent::__construct(\sprintf(
-            '[%s] Attempted to upload %s with size that exceeded the error limit. Size: %d, limit: %d.',
+            '[%s] Attempted to upload payloads with size that exceeded the error limit. '
+            . 'Command: %s, size: %d, limit: %d.',
             self::MESSAGE_CODE,
-            $kind,
+            $command,
             $size,
             $limit,
         ));
