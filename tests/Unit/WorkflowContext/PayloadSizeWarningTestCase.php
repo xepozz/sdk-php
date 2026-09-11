@@ -20,6 +20,7 @@ use Temporal\Tests\Unit\Framework\WorkerFactoryMock;
 use Temporal\Tests\Unit\Framework\WorkerMock;
 use Temporal\Worker\WorkerFactoryInterface;
 use Temporal\Worker\WorkerInterface;
+use Temporal\Worker\WorkerOptions;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowMethod;
 
@@ -52,6 +53,26 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame([], $this->records);
     }
 
+    public function testWarningIsSkippedDuringReplay(): void
+    {
+        $this->runWorkflowWithArgument(\str_repeat('x', 2000), replaying: true);
+
+        self::assertSame([], $this->records, 'Replayed commands must not warn again.');
+    }
+
+    public function testWarningIsRepeatedInReplayWhenLoggingInReplayIsEnabled(): void
+    {
+        $this->runWorkflowWithArgument(
+            \str_repeat('x', 2000),
+            replaying: true,
+            enableLoggingInReplay: true,
+        );
+
+        // Known difference from the Go/TS SDKs: there the check runs when the request is actually
+        // sent, so a replay never repeats it, while here it is bound to the Workflow logger.
+        self::assertCount(1, $this->records);
+    }
+
     public function testWarningCanBeDisabled(): void
     {
         $this->runWorkflowWithArgument(\str_repeat('x', 2000), null);
@@ -70,6 +91,8 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
     private function runWorkflowWithArgument(
         string $argument,
         ?PayloadLimitOptions $limits = new PayloadLimitOptions(1024, 1024),
+        bool $replaying = false,
+        bool $enableLoggingInReplay = false,
     ): void {
         $logger = new class($this->records) extends AbstractLogger {
             public function __construct(private array &$records) {}
@@ -80,7 +103,11 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
             }
         };
 
-        $this->worker = $this->factory->newWorker(logger: $logger, payloadLimits: $limits);
+        $this->worker = $this->factory->newWorker(
+            options: WorkerOptions::new()->withEnableLoggingInReplay($enableLoggingInReplay),
+            logger: $logger,
+            payloadLimits: $limits,
+        );
         $this->worker->registerWorkflowObject(
             new
             #[Workflow\WorkflowInterface]
@@ -97,7 +124,9 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
             }
         );
 
-        $this->worker->runWorkflow('PayloadSizeWorkflow', $argument);
+        $replaying
+            ? $this->worker->replayWorkflow('PayloadSizeWorkflow', $argument)
+            : $this->worker->runWorkflow('PayloadSizeWorkflow', $argument);
         $this->worker->expectActivityCall(SimpleActivity::class, 'echo', 'done');
         $this->worker->assertWorkflowReturns('done');
         $this->factory->run($this->worker);
