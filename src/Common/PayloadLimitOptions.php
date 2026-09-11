@@ -43,21 +43,13 @@ final class PayloadLimitOptions
      *        is logged. NULL disables the warning.
      * @param null|positive-int $memoSizeWarning Limit in bytes at which an aggregate memo size
      *        warning is logged. NULL disables the warning.
-     * @param null|positive-int $payloadSizeError Limit in bytes above which payloads are not sent
-     *        to the server at all. NULL, the default, sends them and lets the server reject them.
-     * @param null|positive-int $memoSizeError Limit in bytes above which a memo is not sent to the
-     *        server at all. NULL, the default, sends it and lets the server reject it.
      */
     public function __construct(
         public readonly ?int $payloadSizeWarning = self::DEFAULT_PAYLOAD_SIZE_WARNING,
         public readonly ?int $memoSizeWarning = self::DEFAULT_MEMO_SIZE_WARNING,
-        public readonly ?int $payloadSizeError = null,
-        public readonly ?int $memoSizeError = null,
     ) {
         self::assertPositive($payloadSizeWarning, 'payloadSizeWarning');
         self::assertPositive($memoSizeWarning, 'memoSizeWarning');
-        self::assertPositive($payloadSizeError, 'payloadSizeError');
-        self::assertPositive($memoSizeError, 'memoSizeError');
     }
 
     /**
@@ -75,7 +67,7 @@ final class PayloadLimitOptions
      */
     public static function disabled(): self
     {
-        return new self(null, null, null, null);
+        return new self(null, null);
     }
 
     /**
@@ -87,7 +79,7 @@ final class PayloadLimitOptions
      */
     public function withPayloadSizeWarning(?int $bytes): self
     {
-        return new self($bytes, $this->memoSizeWarning, $this->payloadSizeError, $this->memoSizeError);
+        return new self($bytes, $this->memoSizeWarning);
     }
 
     /**
@@ -99,34 +91,7 @@ final class PayloadLimitOptions
      */
     public function withMemoSizeWarning(?int $bytes): self
     {
-        return new self($this->payloadSizeWarning, $bytes, $this->payloadSizeError, $this->memoSizeError);
-    }
-
-    /**
-     * Limit in bytes above which payloads are not sent to the server at all.
-     *
-     * A Client request throws {@see \Temporal\Exception\PayloadSizeExceededException} instead of
-     * being sent, and a Workflow Task fails instead of being completed with such payloads.
-     *
-     * @param null|positive-int $bytes NULL lets the server reject them instead.
-     *
-     * @experimental This API is experimental and may change in the future.
-     */
-    public function withPayloadSizeError(?int $bytes): self
-    {
-        return new self($this->payloadSizeWarning, $this->memoSizeWarning, $bytes, $this->memoSizeError);
-    }
-
-    /**
-     * Limit in bytes above which a memo is not sent to the server at all.
-     *
-     * @param null|positive-int $bytes NULL lets the server reject it instead.
-     *
-     * @experimental This API is experimental and may change in the future.
-     */
-    public function withMemoSizeError(?int $bytes): self
-    {
-        return new self($this->payloadSizeWarning, $this->memoSizeWarning, $this->payloadSizeError, $bytes);
+        return new self($this->payloadSizeWarning, $bytes);
     }
 
     /**
@@ -136,29 +101,7 @@ final class PayloadLimitOptions
      */
     public function isEnabled(): bool
     {
-        return $this->payloadSizeWarning !== null
-            || $this->memoSizeWarning !== null
-            || $this->hasErrorLimits();
-    }
-
-    /**
-     * Whether payloads above a limit must not be sent at all.
-     *
-     * @experimental This API is experimental and may change in the future.
-     */
-    public function hasErrorLimits(): bool
-    {
-        return $this->payloadSizeError !== null || $this->memoSizeError !== null;
-    }
-
-    /**
-     * The same limits with the error ones turned off.
-     *
-     * @experimental This API is experimental and may change in the future.
-     */
-    public function withoutErrorLimits(): self
-    {
-        return new self($this->payloadSizeWarning, $this->memoSizeWarning);
+        return $this->payloadSizeWarning !== null || $this->memoSizeWarning !== null;
     }
 
     private static function assertPositive(?int $value, string $name): void

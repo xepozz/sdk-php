@@ -115,6 +115,16 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
     protected EnvironmentInterface $env;
     protected PluginRegistry $pluginRegistry;
 
+    /**
+     * The Client the namespace limits are asked for.
+     */
+    private ?WorkflowClient $workflowClient;
+
+    /**
+     * NULL until the Worker starts, and when the namespace enforces no limits.
+     */
+    private ?PayloadSizeLimiter $payloadSizeLimiter = null;
+
     public function __construct(
         DataConverterInterface $dataConverter,
         protected RPCConnectionInterface $rpc,
@@ -122,6 +132,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         ?PluginRegistry $pluginRegistry = null,
         ?WorkflowClient $client = null,
     ) {
+        $this->workflowClient = $client;
         $this->pluginRegistry = new PluginRegistry();
         // Propagate worker plugins from the client first
         if ($client !== null) {
@@ -264,6 +275,8 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $plugins = $this->pluginRegistry->getPlugins(WorkerPluginInterface::class);
         $pipeline = Pipeline::prepare($plugins);
 
+        $this->payloadSizeLimiter = PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter);
+
         return $pipeline->with(function () use ($host): int {
             while ($msg = $host->waitBatch()) {
                 try {
@@ -399,11 +412,17 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
      */
     private function limitPayloads(iterable $commands, array $headers): iterable
     {
+        if ($this->payloadSizeLimiter === null) {
+            return $commands;
+        }
+
         $taskQueue = $headers[self::HEADER_TASK_QUEUE] ?? null;
         $worker = \is_string($taskQueue) ? $this->queues->find($taskQueue) : null;
-        $limiter = $worker === null ? null : PayloadSizeLimiter::forWorker($worker, $this->converter);
 
-        return $limiter?->check($commands) ?? $commands;
+        // A Worker may leave the enforcement to RoadRunner
+        return $worker !== null && $worker->getOptions()->disablePayloadErrorLimit
+            ? $commands
+            : $this->payloadSizeLimiter->check($commands);
     }
 
     private function onRequest(ServerRequestInterface $request, array $headers): PromiseInterface
