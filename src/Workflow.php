@@ -26,6 +26,7 @@ use Temporal\Exception\OutOfContextException;
 use Temporal\Internal\Support\Facade;
 use Temporal\Internal\Workflow\ActivityProxy;
 use Temporal\Internal\Workflow\ChildWorkflowStub;
+use Temporal\Internal\Workflow\WorkflowContext;
 use Temporal\Internal\Workflow\ChildWorkflowProxy;
 use Temporal\Internal\Workflow\ContinueAsNewProxy;
 use Temporal\Internal\Workflow\ExternalWorkflowProxy;
@@ -835,10 +836,13 @@ final class Workflow extends Facade
         mixed $returnType = null,
     ): mixed {
         Awaiter::assertManaged();
-        return Awaiter::await(
-            self::getCurrentContext()->executeChildWorkflow($type, $args, $options, $returnType),
-            interruptOnCancel: !ChildWorkflowStub::isCancellable($options),
-        );
+        $context = self::getCurrentContext();
+        $result = $context->executeChildWorkflow($type, $args, $options, $returnType);
+        $cancellable = $context instanceof WorkflowContext
+            ? $context->isChildWorkflowCancellable()
+            : ChildWorkflowStub::isCancellable($options);
+
+        return Awaiter::await($result, interruptOnCancel: !$cancellable);
     }
 
     /**

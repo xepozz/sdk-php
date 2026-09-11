@@ -184,8 +184,6 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function onCancel(callable $then): self
     {
-        // A destroyed scope holds no state a handler could observe; registering one would fail
-        // on the unset properties instead of being a no-op.
         $this->torndown or $this->addOnCancel($then);
         return $this;
     }
@@ -202,16 +200,13 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function cancel(?\Throwable $reason = null): void
     {
+        // A destroyed scope is inert: cleanup in another scope's finally must not fatal on it.
         if ($this->torndown) {
-            // The scope is fully destroyed: there is nothing left to cancel. Cleanup running in
-            // a finally block of another scope must not fatal on it.
             return;
         }
 
         if ($reason instanceof DestructMemorizedInstanceException) {
-            // A destruct cancellation still has to reach the detached children and the pending
-            // requests a cancelled or settled scope keeps, but only once: their links are never
-            // forgotten, so a second pass would reject the same requests twice.
+            // Forwarded once: the links are never forgotten, a second pass rejects twice.
             if ($this->destructForwarded) {
                 return;
             }
@@ -223,9 +218,7 @@ class Scope implements CancellationScopeInterface, Destroyable
             return;
         }
 
-        // A scope is cancelled once. A settled scope keeps the links of the scopes it started and
-        // of the requests it sent without awaiting, so the cancellation still reaches them, but
-        // running the handlers twice would send a second Cancel command for the same request.
+        // Forwarded once: running the links twice sends a second Cancel for the same request.
         if ($this->cancelForwarded) {
             return;
         }
@@ -259,10 +252,8 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     public function promise(): PromiseInterface
     {
+        // A destroyed scope has no outcome left to deliver.
         if ($this->torndown) {
-            // A destroyed scope has no outcome left to deliver. Returning a promise that never
-            // settles keeps cleanup code inert instead of fatal, and the fiber that awaits it is
-            // unwound by the destruction that destroyed this scope.
             return (new Deferred())->promise();
         }
 
@@ -310,14 +301,12 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     /**
      * Connects promise to scope context to be cancelled on promise cancel.
-     */
-    /**
+     *
      * @param non-empty-string $conditionGroupId
      */
     public function onAwait(Deferred $deferred, string $conditionGroupId): void
     {
         $cancelID = $this->addOnCancel(function (?\Throwable $e = null) use ($deferred, $conditionGroupId): void {
-            // The await is over: no condition of the group is evaluated again.
             $this->context->rejectConditionGroup($conditionGroupId, $e ?? new CanceledFailure(''));
             $deferred->reject($e ?? new CanceledFailure(''));
         }, internal: true);
@@ -336,11 +325,9 @@ class Scope implements CancellationScopeInterface, Destroyable
         $this->destroyed = true;
         $this->destroyChildren();
         $this->unwindCoroutine();
-        // Unwinding may have started new scopes from finally blocks.
         $this->destroyChildren();
 
         if ($this->ownsContext) {
-            // A Destroyable workflow instance may use the Workflow facade from destroy().
             $savedContext = Facade::getCurrentContext();
 
             try {
@@ -393,13 +380,11 @@ class Scope implements CancellationScopeInterface, Destroyable
             $this->forgetCancelHandler($cancelID);
             unset($this->children[$cancelID]);
 
-            // The last running child of a settled scope releases the settled scope as well.
             if ($this->closed) {
                 $this->unlinkFromParentIfIdle();
             }
         };
-        // A settled scope stays linked to its parent while scopes it started are still running,
-        // so cancellation and destruction keep reaching them through the parent chain.
+        // A settled scope stays linked while it still has children: cancellation reaches them.
         $scope->onClose(static fn() => $scope->unlinkFromParentIfIdle());
 
         return $scope;
@@ -492,13 +477,12 @@ class Scope implements CancellationScopeInterface, Destroyable
         try {
             foreach ($this->orderedCancelHandlers() as $i => $handler) {
                 if (isset($this->detachedLinkIDs[$i]) && !$reason instanceof DestructMemorizedInstanceException) {
-                    // A detached child ignores this cancellation; keep its link for a destruct one.
+                    // A detached child ignores this one; its link is kept for a destruct cancellation.
                     continue;
                 }
 
                 $this->makeCurrent();
-                // Links of children and requests are removed by their own settlement, so a later
-                // destruct cancellation still reaches them; everything else fires once.
+                // Links of children and requests are removed by their own settlement.
                 isset($this->internalCancelIDs[$i]) or $this->forgetCancelHandler($i);
                 $handler($reason);
             }
@@ -547,8 +531,7 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         try {
-            // A Fiber that is still suspended is force-closed by the engine here;
-            // its finally blocks run and may throw.
+            // A still suspended Fiber is force-closed here; its finally blocks run and may throw.
             unset($this->coroutine);
         } catch (\Throwable) {
         }
@@ -598,8 +581,7 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $id = ++$this->cancelID;
 
-        // Sticky cancellation comes first: a handler attached to a scope that was cancelled,
-        // settled or not, is notified at once.
+        // Sticky: a handler attached to an already cancelled scope is notified at once.
         if (FeatureFlags::$propagateCancellationToNewScopes && $this->cancelled && $cancellable) {
             $savedContext = Facade::getCurrentContext();
 
@@ -614,8 +596,7 @@ class Scope implements CancellationScopeInterface, Destroyable
         }
 
         if ($this->closed && !$internal) {
-            // A user callback attached after the scope settled never fires; the links of
-            // requests and scopes started from a settled scope are still kept.
+            // A user callback attached after the scope settled never fires; internal links do.
             return $id;
         }
 
@@ -774,8 +755,7 @@ class Scope implements CancellationScopeInterface, Destroyable
     {
         $onClose = $this->onClose;
         $this->onClose = [];
-        // Links of pending requests and running children stay: cancel() of a settled scope
-        // forwards to them, and they remove themselves when the request or child settles.
+        // Links of pending requests and running children stay until they settle themselves.
         $this->onCancel = \array_intersect_key($this->onCancel, $this->internalCancelIDs);
         unset($this->coroutine);
 
@@ -820,8 +800,7 @@ class Scope implements CancellationScopeInterface, Destroyable
             return;
         }
 
-        // The synchronous tick may resume other fibers (nested in the current one); their contexts
-        // must not leak into the caller.
+        // A nested tick may resume other fibers; their contexts must not leak into the caller.
         $savedContext = Facade::getCurrentContext();
 
         try {
@@ -833,7 +812,6 @@ class Scope implements CancellationScopeInterface, Destroyable
 
     private function unlinkFromParentIfIdle(): void
     {
-        // A settled scope stays linked while it has running children or pending requests.
         if (!$this->closed || $this->children !== [] || $this->internalCancelIDs !== [] || $this->parentUnlink === null) {
             return;
         }

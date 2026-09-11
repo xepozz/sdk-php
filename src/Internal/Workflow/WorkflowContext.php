@@ -121,6 +121,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected ?string $guardReason = null;
 
     protected ?string $currentDetails = null;
+    private bool $childWorkflowCancellable = true;
     private bool $resolvingConditions = false;
     private bool $conditionsDirty = false;
 
@@ -328,7 +329,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     {
         return $this->callsInterceptor->with(
             fn(GetVersionInput $input): PromiseInterface => EncodedValues::decodePromise(
-                // A version marker is not subject to scope cancellation (parity with the other SDKs).
+                // A marker is not subject to scope cancellation (parity with the other SDKs).
                 $this->request(
                     new GetVersion($input->changeId, $input->minSupported, $input->maxSupported),
                     cancellable: false,
@@ -347,7 +348,6 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
         try {
             if (!$this->isReplaying()) {
-                // Only the user callback is read-only; an interceptor around it may still issue commands.
                 $guarded = static fn(): mixed => self::callReadOnly($closure, 'a side effect callback');
                 $value = $this->callsInterceptor->with(
                     $guarded,
@@ -367,7 +367,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         }
 
         $last = fn(): PromiseInterface => EncodedValues::decodePromise(
-            // A side effect marker is not subject to scope cancellation (parity with the other SDKs).
+            // A marker is not subject to scope cancellation (parity with the other SDKs).
             $this->request(
                 new SideEffect(
                     EncodedValues::fromValues([$value]),
@@ -458,12 +458,25 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         mixed $returnType = null,
     ): PromiseInterface {
         return $this->callsInterceptor->with(
-            fn(ExecuteChildWorkflowInput $input): PromiseInterface => $this
-                ->newUntypedChildWorkflowStub($input->type, $input->options)
-                ->executeAsync($input->args, $input->returnType),
+            function (ExecuteChildWorkflowInput $input): PromiseInterface {
+                // The options an interceptor settled on decide whether the request can be cancelled.
+                $this->childWorkflowCancellable = ChildWorkflowStub::isCancellable($input->options);
+
+                return $this->newUntypedChildWorkflowStub($input->type, $input->options)
+                    ->executeAsync($input->args, $input->returnType);
+            },
             /** @see WorkflowOutboundCallsInterceptor::executeChildWorkflow() */
             'executeChildWorkflow',
         )(new ExecuteChildWorkflowInput($type, $args, $options, $returnType));
+    }
+
+    /**
+     * Whether the request of the child workflow started by the last {@see executeChildWorkflow()}
+     * call can be cancelled through the server.
+     */
+    public function isChildWorkflowCancellable(): bool
+    {
+        return $this->childWorkflowCancellable;
     }
 
     public function newUntypedChildWorkflowStub(
@@ -759,9 +772,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
      */
     public function resolveConditions(): void
     {
-        // Settling a condition runs callbacks that call back into this method. Instead of
-        // recursing (and copying the pending list at every level), remember that another
-        // pass is needed and run it once the current one is over.
+        // Settling a condition re-enters this method; run another pass instead of recursing.
         if ($this->resolvingConditions) {
             $this->conditionsDirty = true;
             return;
@@ -777,12 +788,10 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
                 foreach ($this->awaits as $awaitsGroupId => $awaitsGroup) {
                     foreach ($awaitsGroup as $i => [$condition, $deferred]) {
                         if (!isset($this->awaits[$awaitsGroupId][$i])) {
-                            // Settled by a previous condition of this pass.
                             continue;
                         }
 
-                        // A condition that throws fails the activation (workflow task), as in the
-                        // generator runtime and the Java SDK.
+                        // A condition that throws fails the activation, as in the generator runtime.
                         if (self::callReadOnly($condition, 'an await condition')) {
                             unset($this->awaits[$awaitsGroupId][$i]);
                             $deferred->resolve(true);
@@ -804,8 +813,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
     public function resolveConditionGroup(string $conditionGroupId): void
     {
-        // The await is over: the sibling conditions of the group are settled too, so their
-        // scope links are released.
+        // The await is over: the sibling conditions settle too, releasing their scope links.
         foreach ($this->takeConditionGroup($conditionGroupId) as [, $deferred]) {
             $deferred->resolve(false);
         }
@@ -889,6 +897,8 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
      */
     public function setCurrentDetails(?string $details): void
     {
+        $this->assertWritable();
+
         $this->currentDetails = $details;
     }
 
@@ -914,6 +924,8 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
 
     protected function awaitRequest(callable|Mutex|PromiseInterface ...$conditions): PromiseInterface
     {
+        $this->assertWritable();
+
         $result = [];
         $conditionGroupId = Uuid::v4();
         $this->recordTrace();
@@ -997,7 +1009,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
      */
     protected function recordTrace(): void
     {
-        $this->readonly or $this->trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
+        $this->isReadonly() or $this->trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
     }
 
     /**
