@@ -34,7 +34,7 @@ use Temporal\Tests\Workflow\SimpleWorkflow;
  */
 class TypedStubTestCase extends AbstractClient
 {
-    public function testGetResult(): void
+    public function testGetResult()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(SimpleWorkflow::class);
@@ -42,7 +42,7 @@ class TypedStubTestCase extends AbstractClient
         $this->assertSame('HELLO WORLD', $simple->handler('hello world'));
     }
 
-    public function testStartAsync(): void
+    public function testStartAsync()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(SimpleWorkflow::class);
@@ -55,7 +55,7 @@ class TypedStubTestCase extends AbstractClient
         $this->assertSame('TEST', $r->getResult());
     }
 
-    public function testStartWithoutHandler(): void
+    public function testStartWithoutHandler()
     {
         $client = $this->createClient();
         $workflow = $client->newWorkflowStub(WorkflowWithoutHandler::class);
@@ -66,7 +66,7 @@ class TypedStubTestCase extends AbstractClient
         $client->start($workflow);
     }
 
-    public function testStartWithSignalWithoutHandler(): void
+    public function testStartWithSignalWithoutHandler()
     {
         $client = $this->createClient();
         $workflow = $client->newWorkflowStub(WorkflowWithoutHandler::class);
@@ -77,7 +77,7 @@ class TypedStubTestCase extends AbstractClient
         $client->startWithSignal($workflow, 'signal');
     }
 
-    public function testQueryWorkflow(): void
+    public function testQueryWorkflow()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(QueryWorkflow::class);
@@ -93,7 +93,7 @@ class TypedStubTestCase extends AbstractClient
         $this->assertSame(88, $e->getResult());
     }
 
-    public function testQueryNotExistingMethod(): void
+    public function testQueryNotExistingMethod()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('QueryWorkflow');
@@ -113,7 +113,7 @@ class TypedStubTestCase extends AbstractClient
         $this->fail('Expected exception to be thrown');
     }
 
-    public function testGetDTOResult(): void
+    public function testGetDTOResult()
     {
         $w = $this->createClient();
         $dto = $w->newWorkflowStub(SimpleDTOWorkflow::class);
@@ -123,23 +123,23 @@ class TypedStubTestCase extends AbstractClient
         $u->email = 'email@domain.com';
 
         $this->assertEquals(
-            new Message(\sprintf("Hello %s <%s>", $u->name, $u->email)),
-            $dto->handler($u),
+            new Message(sprintf("Hello %s <%s>", $u->name, $u->email)),
+            $dto->handler($u)
         );
     }
 
-    public function testVoidReturnType(): void
+    public function testVoidReturnType()
     {
         $client = $this->createClient();
         $dto = $client->newWorkflowStub(ActivityReturnTypeWorkflow::class);
 
         $this->assertEquals(
             100,
-            $dto->handler(),
+            $dto->handler()
         );
     }
 
-    public function testGeneratorCoroutines(): void
+    public function testGeneratorCoroutines()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(GeneratorWorkflow::class);
@@ -147,13 +147,13 @@ class TypedStubTestCase extends AbstractClient
         $this->assertSame(
             [
                 ['HELLO WORLD', 'HELLO WORLD'],
-                ['ANOTHER', 'ANOTHER'],
+                ['ANOTHER', 'ANOTHER']
             ],
-            $simple->handler('hello world'),
+            $simple->handler('hello world')
         );
     }
 
-    public function testGeneratorErrorCoroutines(): void
+    public function testGeneratorErrorCoroutines()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(GeneratorWorkflow::class);
@@ -166,7 +166,7 @@ class TypedStubTestCase extends AbstractClient
         }
     }
 
-    public function testGeneratorErrorInNestedActionCoroutines(): void
+    public function testGeneratorErrorInNestedActionCoroutines()
     {
         $client = $this->createClient();
         $simple = $client->newWorkflowStub(GeneratorWorkflow::class);
@@ -184,7 +184,7 @@ class TypedStubTestCase extends AbstractClient
     /**
      * @group skip-on-test-server
      */
-    public function testSignalRunningWorkflowWithInheritedSignal(): void
+    public function testSignalRunningWorkflowWithInheritedSignal()
     {
         $client = $this->createClient();
 
@@ -203,7 +203,7 @@ class TypedStubTestCase extends AbstractClient
     /**
      * @group skip-on-test-server
      */
-    public function testSignalRunningWorkflowWithInheritedSignalViaParentInterface(): void
+    public function testSignalRunningWorkflowWithInheritedSignalViaParentInterface()
     {
         $client = $this->createClient();
 
@@ -219,7 +219,7 @@ class TypedStubTestCase extends AbstractClient
         $this->assertEquals(['test1'], $result);
     }
 
-    public function testSignalResolvesCondidtionsBeforePromiseRun(): void
+    public function testSignalResolvesCondidtionsBeforePromiseRun()
     {
         $client = $this->createClient();
 

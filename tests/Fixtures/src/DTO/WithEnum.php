@@ -17,5 +17,6 @@ class WithEnum
 {
     public function __construct(
         public SimpleEnum $simple,
-    ) {}
+    ) {
+    }
 }

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\DTO\Type\DateIntervalType;
 
+use DateInterval;
 use Temporal\Internal\Marshaller\Type\DateIntervalType;
 use Temporal\Tests\Unit\DTO\AbstractDTOMarshalling;
 use Temporal\Tests\Unit\DTO\Type\DateIntervalType\Stub\DateIntervalDto;
@@ -25,7 +26,7 @@ class DateIntervalTestCase extends AbstractDTOMarshalling
         $result = $this->marshal($dto);
         $unmarshal = $this->unmarshal($result, new DateIntervalDto());
 
-        self::assertInstanceOf(\DateInterval::class, $unmarshal->interval);
+        self::assertInstanceOf(DateInterval::class, $unmarshal->interval);
     }
 
     // public function testMarshalAndUnmarshalCorrectValue(): void

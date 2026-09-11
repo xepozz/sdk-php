@@ -47,11 +47,11 @@ class CancelledNestedWorkflow
                             }
 
                             $this->status[] = 'second scope done';
-                        },
+                        }
                     )->onCancel(
-                        function (): void {
+                        function () {
                             $this->status[] = 'close second scope';
-                        },
+                        }
                     );
 
                     try {
@@ -64,11 +64,11 @@ class CancelledNestedWorkflow
                     $this->status[] = 'first scope done';
 
                     yield $scope;
-                },
+                }
             )->onCancel(
-                function (): void {
+                function () {
                     $this->status[] = 'close first scope';
-                },
+                }
             );
         } catch (CanceledFailure $e) {
             $this->status[] = 'close process';

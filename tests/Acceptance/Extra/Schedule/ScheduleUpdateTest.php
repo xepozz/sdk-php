@@ -20,15 +20,16 @@ class ScheduleUpdateTest extends TestCase
     #[Test]
     public function searchAttributesClearViaUpdate(
         ScheduleClientInterface $client,
-    ): void {
+    ): void
+    {
         // Create a new schedule
         $handle = $client->createSchedule(
             Schedule::new()
                 ->withAction(
-                    StartWorkflowAction::new('TestWorkflow'),
+                    StartWorkflowAction::new('TestWorkflow')
                 )->withSpec(
                     ScheduleSpec::new()
-                        ->withStartTime('+1 hour'),
+                        ->withStartTime('+1 hour')
                 ),
             ScheduleOptions::new()
                 ->withMemo(['memokey2' => 'memoval2'])
@@ -36,8 +37,8 @@ class ScheduleUpdateTest extends TestCase
                     EncodedCollection::fromValues([
                         'foo' => 'bar',
                         'bar' => 42,
-                    ]),
-                ),
+                    ])
+                )
         );
 
         try {
@@ -45,13 +46,13 @@ class ScheduleUpdateTest extends TestCase
             self::assertEquals(2, $description->searchAttributes->count());
 
             // Update the schedule search attribute by clearing them
-            $handle->update(static function (ScheduleUpdateInput $input): ScheduleUpdate {
+            $handle->update(function (ScheduleUpdateInput $input): ScheduleUpdate {
                 $schedule = $input->description->schedule;
                 return ScheduleUpdate::new($schedule)
                     ->withSearchAttributes(EncodedCollection::empty());
             });
 
-            \sleep(1);
+            sleep(1);
             self::assertEquals(0, $handle->describe()->searchAttributes->count());
         } finally {
             $handle->delete();
@@ -61,23 +62,24 @@ class ScheduleUpdateTest extends TestCase
     #[Test]
     public function searchAttributesAddViaUpdate(
         ScheduleClientInterface $client,
-    ): void {
+    ): void
+    {
         // Create a new schedule
         $handle = $client->createSchedule(
             Schedule::new()
                 ->withAction(
-                    StartWorkflowAction::new('TestWorkflow'),
+                    StartWorkflowAction::new('TestWorkflow')
                 )->withSpec(
                     ScheduleSpec::new()
-                        ->withStartTime('+1 hour'),
+                        ->withStartTime('+1 hour')
                 ),
             ScheduleOptions::new()
                 ->withMemo(['memokey2' => 'memoval2'])
                 ->withSearchAttributes(
                     EncodedCollection::fromValues([
                         'foo' => 'bar',
-                    ]),
-                ),
+                    ])
+                )
         );
 
         try {
@@ -85,13 +87,13 @@ class ScheduleUpdateTest extends TestCase
             self::assertEquals(1, $description->searchAttributes->count());
 
             // Update the schedule search attribute by clearing them
-            $handle->update(static function (ScheduleUpdateInput $input): ScheduleUpdate {
+            $handle->update(function (ScheduleUpdateInput $input): ScheduleUpdate {
                 $schedule = $input->description->schedule;
                 return ScheduleUpdate::new($schedule)
                     ->withSearchAttributes($input->description->searchAttributes->withValue('bar', 69));
             });
 
-            \sleep(1);
+            sleep(1);
             self::assertEquals(2, $handle->describe()->searchAttributes->count());
             self::assertSame(69, $handle->describe()->searchAttributes->getValue('bar'));
         } finally {
@@ -108,17 +110,17 @@ class ScheduleUpdateTest extends TestCase
             Schedule::new()
                 ->withAction(
                     StartWorkflowAction::new('TestWorkflow')
-                        ->withMemo(['memokey1' => 'memoval1']),
+                        ->withMemo(['memokey1' => 'memoval1'])
                 )->withSpec(
                     ScheduleSpec::new()
-                        ->withStartTime('+1 hour'),
+                        ->withStartTime('+1 hour')
                 ),
             ScheduleOptions::new()
                 ->withMemo(['memokey2' => 'memoval2'])
                 ->withSearchAttributes(EncodedCollection::fromValues([
                     'foo' => 'bar',
                     'bar' => 42,
-                ])),
+                ]))
         );
 
         try {
@@ -132,7 +134,7 @@ class ScheduleUpdateTest extends TestCase
             self::assertSame('memoval1', $startWfAction->memo->getValue("memokey1"));
 
             // Add memo and update task timeout
-            $handle->update(static function (ScheduleUpdateInput $input): ScheduleUpdate {
+            $handle->update(function (ScheduleUpdateInput $input): ScheduleUpdate {
                 $schedule = $input->description->schedule;
                 /** @var StartWorkflowAction $action */
                 $action = $schedule->action;
@@ -150,7 +152,7 @@ class ScheduleUpdateTest extends TestCase
 
             // Update the schedule state
             $expectedUpdateTime = $description->info->lastUpdateAt;
-            $handle->update(static function (ScheduleUpdateInput $input): ScheduleUpdate {
+            $handle->update(function (ScheduleUpdateInput $input): ScheduleUpdate {
                 $schedule = $input->description->schedule;
                 $schedule = $schedule->withState($schedule->state->withPaused(true));
                 return ScheduleUpdate::new($schedule);

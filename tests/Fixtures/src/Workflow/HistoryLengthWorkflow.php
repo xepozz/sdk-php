@@ -29,7 +29,7 @@ class HistoryLengthWorkflow
         );
 
         $str = yield Workflow::sideEffect(
-            static function () use ($input) {
+            function () use ($input) {
                 return $input . '-42';
             },
         );

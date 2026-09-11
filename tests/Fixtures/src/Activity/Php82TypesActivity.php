@@ -13,7 +13,6 @@ namespace Temporal\Tests\Activity;
 
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
-
 /*
 todo: uncomment this with min php 8.2 requirement or when we can skip activities loading depending on php version
 #[ActivityInterface(prefix: "Php82.")]

@@ -11,6 +11,7 @@ use Temporal\Worker\Transport\HostConnectionInterface;
 final class RecordingHost implements HostConnectionInterface
 {
     private int $inboundBatchId = 0;
+
     private int $outboundSeq = 0;
 
     public function __construct(

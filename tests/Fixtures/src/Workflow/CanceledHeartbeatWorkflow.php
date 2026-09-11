@@ -28,7 +28,7 @@ class CanceledHeartbeatWorkflow
             ActivityOptions::new()
                 ->withStartToCloseTimeout(50)
                 ->withCancellationType(ActivityCancellationType::WAIT_CANCELLATION_COMPLETED)
-                ->withHeartbeatTimeout(1),
+                ->withHeartbeatTimeout(1)
         );
 
         return yield $act->slow('test');

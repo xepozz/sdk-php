@@ -21,8 +21,7 @@ use Temporal\Workflow\WorkflowMethod;
 class HeadersWorkflow
 {
     #[WorkflowMethod(name: 'InterceptorHeaderWorkflow')]
-    public function handler(): iterable
-    {
+    public function handler(): iterable {
         // Run activity
         $activityResult = yield Workflow::newActivityStub(
             SimpleActivity::class,

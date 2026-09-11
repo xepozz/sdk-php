@@ -16,7 +16,6 @@ final class ServerMock
     private CommandHandlerFactory $commandHandlerFactory;
     private Carbon $currentTime;
     private array $queue = [];
-
     /** @var int<0, max> */
     private int $historyLength = 0;
 
@@ -72,18 +71,6 @@ final class ServerMock
         return $this->historyLength;
     }
 
-    public function checkWaitingExpectations(): void
-    {
-        foreach ($this->expectations as $expectation) {
-            $expectation->fail();
-        }
-    }
-
-    public function expect(ExpectationInterface $expectation): void
-    {
-        $this->expectations[] = $expectation;
-    }
-
     private function checkExpectation(CommandInterface $command): ?ExpectationInterface
     {
         foreach ($this->expectations as $index => $expectation) {
@@ -94,5 +81,17 @@ final class ServerMock
         }
 
         return null;
+    }
+
+    public function checkWaitingExpectations(): void
+    {
+        foreach ($this->expectations as $expectation) {
+            $expectation->fail();
+        }
+    }
+
+    public function expect(ExpectationInterface $expectation): void
+    {
+        $this->expectations[] = $expectation;
     }
 }

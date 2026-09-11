@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Client\Common;
 
+use Generator;
 use PHPUnit\Framework\TestCase;
 use Temporal\Client\Common\Paginator;
 
@@ -41,9 +42,9 @@ final class PaginatorTestCase extends TestCase
     }
 
     /**
-     * @return \Generator<array-key, list<int>>
+     * @return Generator<array-key, list<int>>
      */
-    private function createGenerator(): \Generator
+    private function createGenerator(): Generator
     {
         yield [1, 2, 3];
         yield [4, 5, 6];

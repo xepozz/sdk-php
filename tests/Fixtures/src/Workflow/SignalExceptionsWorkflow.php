@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Workflow;
 
+use InvalidArgumentException;
 use Temporal\Activity\ActivityOptions;
 use Temporal\Common\RetryOptions;
 use Temporal\Workflow;
@@ -34,7 +35,7 @@ class SignalExceptionsWorkflow
                 return $received;
             }
 
-            $message = \array_shift($this->greetings);
+            $message = array_shift($this->greetings);
             $received[] = $message;
         }
     }
@@ -50,7 +51,7 @@ class SignalExceptionsWorkflow
     public function failInvalidArgument($name = 'foo'): void
     {
         $this->greetings[] = "invalidArgument $name";
-        throw new \InvalidArgumentException("Invalid argument $name");
+        throw new InvalidArgumentException("Invalid argument $name");
     }
 
     #[SignalMethod]
@@ -60,14 +61,14 @@ class SignalExceptionsWorkflow
             ActivityOptions::new()
                 ->withScheduleToStartTimeout(1)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(1),
+                    RetryOptions::new()->withMaximumAttempts(1)
                 )
                 ->withStartToCloseTimeout(1),
         )->execute('nonExistingActivityName', [$name]);
     }
 
     #[SignalMethod]
-    public function failRetryable(): void
+    public function failRetryable()
     {
         10 / 0;
     }

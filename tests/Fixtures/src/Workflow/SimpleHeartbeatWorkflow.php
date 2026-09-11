@@ -24,7 +24,7 @@ class SimpleHeartbeatWorkflow
     {
         $act = Workflow::newActivityStub(
             HeartBeatActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(50),
+            ActivityOptions::new()->withStartToCloseTimeout(50)
         );
 
         return yield $act->doSomething($iterations);

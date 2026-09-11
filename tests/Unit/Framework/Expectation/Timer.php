@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Framework\Expectation;
 
+use DateTimeImmutable;
 use PHPUnit\Framework\ExpectationFailedException;
 use Temporal\DataConverter\EncodedValues;
 use Temporal\Internal\Transport\Request\NewTimer;
@@ -30,7 +31,7 @@ final class Timer implements ExpectationInterface
 
     public function run(CommandInterface $command): CommandInterface
     {
-        return new SuccessResponse(EncodedValues::empty(), $command->getID(), new TickInfo(new \DateTimeImmutable()));
+        return new SuccessResponse(EncodedValues::empty(), $command->getID(), new TickInfo(new DateTimeImmutable()));
     }
 
     public function fail(): void

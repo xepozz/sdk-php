@@ -346,7 +346,7 @@ class TypedSearchAttributesTestCase extends TestCase
         self::assertNull(ValueType::fromMetadata('INDEXED_VALUE_TYPE_UNKNOWN'));
     }
 
-    public function testValues(): void
+    public function testValues()
     {
         $collection = TypedSearchAttributes::empty()
             ->withValue(SearchAttributeKey::forFloat('testFloat'), 1.1)

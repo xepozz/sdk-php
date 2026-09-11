@@ -10,7 +10,7 @@ namespace Temporal\Tests\Functional\Client;
  */
 class UpsertSearchAttributesWorkflowTestCase extends AbstractClient
 {
-    public function testUpsertSearchAttributes(): void
+    public function testUpsertSearchAttributes()
     {
         $client = $this->createClient();
         $workflow = $client->newUntypedWorkflowStub('UpsertSearchAttributesWorkflow');

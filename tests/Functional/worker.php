@@ -13,7 +13,7 @@ use Temporal\Worker\FeatureFlags;
 use Temporal\Worker\WorkerInterface;
 
 require __DIR__ . '/../../vendor/autoload.php';
-\chdir(__DIR__ . '/../../');
+chdir(__DIR__ . '/../../');
 
 // Default feature flags
 FeatureFlags::$warnOnWorkflowUnfinishedHandlers = false;
@@ -23,7 +23,7 @@ FeatureFlags::$warnOnWorkflowUnfinishedHandlers = false;
  * @return array<class-string>
  */
 $getClasses = static function (string $dir, string $namespace): iterable {
-    $dir = \realpath($dir);
+    $dir = realpath($dir);
     $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
 
     /** @var SplFileInfo $_ */
@@ -70,17 +70,17 @@ foreach ($getClasses(__DIR__ . '/../Fixtures/src/Workflow', 'Temporal\\Tests\\Wo
 
         \array_walk(
             $workers,
-            static fn(WorkerInterface $worker) => $worker->registerWorkflowTypes($class),
+            static fn (WorkerInterface $worker) => $worker->registerWorkflowTypes($class),
         );
     }
 }
 
 // register all activity
 foreach ($getClasses(__DIR__ . '/../Fixtures/src/Activity', 'Temporal\\Tests\\Activity\\') as $class) {
-    if (\class_exists($class) && !\interface_exists($class)) {
+    if (class_exists($class) && !\interface_exists($class)) {
         \array_walk(
             $workers,
-            static fn(WorkerInterface $worker) => $worker->registerActivityImplementations(new $class()),
+            static fn (WorkerInterface $worker) => $worker->registerActivityImplementations(new $class()),
         );
     }
 }

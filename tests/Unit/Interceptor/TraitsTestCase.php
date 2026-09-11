@@ -11,7 +11,11 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\Interceptor;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+use Temporal\DataConverter\DataConverter;
+use Temporal\DataConverter\DataConverterInterface;
 use Temporal\Interceptor\ActivityInboundInterceptor;
+use Temporal\Interceptor\Header;
 use Temporal\Interceptor\Trait\ActivityInboundInterceptorTrait;
 use Temporal\Interceptor\Trait\WorkflowClientCallsInterceptorTrait;
 use Temporal\Interceptor\Trait\WorkflowInboundCallsInterceptorTrait;

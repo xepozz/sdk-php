@@ -24,7 +24,7 @@ class DynamicObjectReturnWorkflow
             'DynamicObjectReturnActivity.doSomething',
             ['a'],
             $opts,
-            A::class,
+            A::class
         );
         if ($result instanceof A) {
             ++$cp;
@@ -34,7 +34,7 @@ class DynamicObjectReturnWorkflow
             'DynamicObjectReturnActivity.doSomething',
             ['b'],
             $opts,
-            new \ReflectionClass(B::class),
+            new \ReflectionClass(B::class)
         );
         if ($result instanceof B) {
             ++$cp;
@@ -49,7 +49,7 @@ class DynamicObjectReturnWorkflow
             'DynamicObjectReturnActivity.doSomething',
             ['b'],
             $opts,
-            Type::fromReflectionClass(new \ReflectionClass(B::class)),
+            Type::fromReflectionClass(new \ReflectionClass(B::class))
         );
         if ($result instanceof B) {
             ++$cp;

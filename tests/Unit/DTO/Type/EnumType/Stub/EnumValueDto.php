@@ -20,5 +20,6 @@ class EnumValueDto
     public ScalarEnum $scalarEnum;
 
     public ScalarEnum $autoScalarEnum;
+
     public ?ScalarEnum $nullable;
 }

@@ -39,6 +39,7 @@ use Temporal\Tests\Workflow\AggregatedWorkflowImpl;
 class WorkflowDeclarationTestCase extends AbstractDeclaration
 {
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow without handler")]
@@ -51,6 +52,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow without cron attribute (cron prototype value should be null)")]
@@ -63,6 +65,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with cron attribute (cron prototype value should not be null)")]
@@ -76,6 +79,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow without method retry attribute (method retry prototype value should be null)")]
@@ -88,6 +92,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with method retry attribute (method retry prototype value should not be null)")]
@@ -97,13 +102,13 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
         $prototype = $reader->fromClass(WorkflowWithRetry::class);
 
         $this->assertNotNull($prototype->getMethodRetry());
-        $this->assertEquals(
-            CarbonInterval::microsecond(42)->f,
-            $prototype->getMethodRetry()->initialInterval->f,
+        $this->assertEquals(CarbonInterval::microsecond(42)->f,
+            $prototype->getMethodRetry()->initialInterval->f
         );
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with method retry and cron attributes (prototypes value should not be null)")]
@@ -120,6 +125,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow without query methods (query methods count equals 0)")]
@@ -132,6 +138,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with query methods (query methods count not equals 0)")]
@@ -145,6 +152,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow without signal methods (signal methods count equals 0)")]
@@ -157,6 +165,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with signal methods (signal methods count not equals 0)")]
@@ -171,6 +180,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Workflow should be named same as method name")]
@@ -183,6 +193,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Workflow should be named same as the name specified in the workflow method attribute")]
@@ -195,6 +206,7 @@ class WorkflowDeclarationTestCase extends AbstractDeclaration
     }
 
     /**
+     * @param WorkflowReader $reader
      * @throws \ReflectionException
      */
     #[TestDox("Reading workflow with WorkflowInit attribute")]

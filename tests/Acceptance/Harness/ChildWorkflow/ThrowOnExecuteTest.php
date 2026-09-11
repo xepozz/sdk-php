@@ -99,7 +99,7 @@ class ChildWorkflow
 class ChildWorkflowThrowOnInit
 {
     #[WorkflowMethod('Harness_ChildWorkflow_ThrowsOnExecute_ChildThrowOnInit')]
-    public function run(): void
+    public function run()
     {
         throw new ApplicationFailure('Test message', 'TestError', true, EncodedValues::fromValues([['foo' => 'bar']]));
     }

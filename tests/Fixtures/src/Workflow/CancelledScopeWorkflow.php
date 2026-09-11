@@ -24,20 +24,20 @@ class CancelledScopeWorkflow
     {
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5),
+            ActivityOptions::new()->withStartToCloseTimeout(5)
         );
 
         $cancelled = 'not';
 
         $scope = Workflow::async(
-            static function () use ($simple) {
+            function () use ($simple) {
                 yield Workflow::timer(2);
                 yield $simple->slow('hello');
-            },
+            }
         )->onCancel(
-            static function () use (&$cancelled): void {
+            function () use (&$cancelled) {
                 $cancelled = 'yes';
-            },
+            }
         );
 
         yield Workflow::timer(1);

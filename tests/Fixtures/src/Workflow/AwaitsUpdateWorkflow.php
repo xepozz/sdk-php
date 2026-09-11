@@ -32,6 +32,7 @@ class AwaitsUpdateWorkflow
 
     /**
      * @param non-empty-string $name
+     * @return mixed
      */
     #[Workflow\UpdateMethod(name: 'await')]
     public function add(string $name): mixed
@@ -77,12 +78,13 @@ class AwaitsUpdateWorkflow
         $value === null and throw new \InvalidArgumentException('Value must not be null');
         empty($name) and throw new \InvalidArgumentException('Name must not be empty');
         DateInterval::parse($timeout, DateInterval::FORMAT_SECONDS)->isEmpty() and throw new \InvalidArgumentException(
-            'Timeout must not be empty',
+            'Timeout must not be empty'
         );
     }
 
     /**
      * @param non-empty-string $name
+     * @return mixed
      */
     #[Workflow\UpdateMethod(name: 'resolveValue')]
     public function resolve(string $name, mixed $value): mixed
@@ -100,6 +102,7 @@ class AwaitsUpdateWorkflow
 
     /**
      * @param non-empty-string $name
+     * @return mixed
      */
     #[Workflow\QueryMethod(name: 'getValue')]
     public function get(string $name): mixed

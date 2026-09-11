@@ -103,7 +103,7 @@ try {
         WorkerFactory::create(
             converter: $converter,
             pluginRegistry: new PluginRegistry($plugins),
-        ),
+        )
     );
 
     $workerFactory = $container->get(\Temporal\Tests\Acceptance\App\Feature\WorkerFactory::class);

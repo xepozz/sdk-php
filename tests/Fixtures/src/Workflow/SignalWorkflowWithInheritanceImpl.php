@@ -17,7 +17,7 @@ class SignalWorkflowWithInheritanceImpl implements SignalledWorkflowWithInherita
 {
     private array $values = [];
 
-    public function addValue(string $value): void
+    public function addValue(string $value)
     {
         $this->values[] = $value;
     }

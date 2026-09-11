@@ -29,8 +29,8 @@ class EnumDtoWorkflow
             ActivityOptions::new()
                 ->withStartToCloseTimeout(5)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(2),
-                ),
+                    RetryOptions::new()->withMaximumAttempts(2)
+                )
         );
 
         return yield $simple->simpleEnumDto($enum);

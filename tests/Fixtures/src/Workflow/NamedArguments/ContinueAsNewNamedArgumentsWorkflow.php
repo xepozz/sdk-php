@@ -11,8 +11,10 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Workflow\NamedArguments;
 
+use Temporal\Activity\ActivityOptions;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowMethod;
+use Temporal\Tests\Activity\SimpleActivity;
 
 #[Workflow\WorkflowInterface]
 class ContinueAsNewNamedArgumentsWorkflow
@@ -37,7 +39,7 @@ class ContinueAsNewNamedArgumentsWorkflow
         }
 
         if ($int !== 1) {
-            \assert(!empty(Workflow::getInfo()->continuedExecutionRunId));
+            assert(!empty(Workflow::getInfo()->continuedExecutionRunId));
         }
 
         ++$int;
@@ -55,9 +57,9 @@ class ContinueAsNewNamedArgumentsWorkflow
 
     private function shuffleArgs(array $args): array
     {
-        $keys = \array_keys($args);
+        $keys = array_keys($args);
 
-        \shuffle($keys);
+        shuffle($keys);
 
         $shuffled = [];
 

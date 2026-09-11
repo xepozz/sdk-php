@@ -39,7 +39,7 @@ class FeatureWorkflow
     }
 
     #[SignalMethod('my_signal')]
-    public function mySignal(string $arg): void
+    public function mySignal(string $arg)
     {
         $this->result = $arg;
     }

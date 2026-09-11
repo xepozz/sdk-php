@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Workflow\Header;
 
+use Generator;
 use Temporal\Tests\Interceptor\HeaderChanger;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowMethod;
@@ -32,7 +33,7 @@ final class ChildedHeaderWorkflow
      *        - array: will be passed into child workflow as is without merging with parent header
      * @param array|null $activityHeader {@see HandleTrait::runActivity()}
      *
-     * @return \Generator<mixed, mixed, mixed, array{array, array, array}> Returns array of headers:
+     * @return Generator<mixed, mixed, mixed, array{array, array, array}> Returns array of headers:
      *         - [0] - header from parent workflow
      *         - [1] - header from activity
      *         - [2] - header from child workflow

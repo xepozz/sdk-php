@@ -207,7 +207,7 @@ class BaseClientTestCase extends TestCase
      */
     public function testServiceClientCallMaximumAttemptsReached(): void
     {
-        $client = $this->createClientMock(static fn() => new class extends WorkflowServiceClient {
+        $client = $this->createClientMock(fn() => new class extends WorkflowServiceClient {
             public function __construct() {}
 
             public function testCall(): void

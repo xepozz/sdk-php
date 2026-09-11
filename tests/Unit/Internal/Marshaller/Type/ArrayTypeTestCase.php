@@ -62,7 +62,7 @@ final class ArrayTypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('unmarshal')->willReturnCallback(
-            static fn(array $data, object $obj) => (object) $data,
+            fn(array $data, object $obj) => (object) $data,
         );
         $type = new ArrayType($marshaller, \stdClass::class);
 
@@ -85,7 +85,7 @@ final class ArrayTypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('marshal')->willReturnCallback(
-            static fn(object $obj) => (array) $obj,
+            fn(object $obj) => (array) $obj,
         );
         $type = new ArrayType($marshaller, \stdClass::class);
 
@@ -156,7 +156,7 @@ final class ArrayTypeTestCase extends TestCase
     {
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->method('unmarshal')->willReturnCallback(
-            static fn(array $data, object $obj) => (object) $data,
+            fn(array $data, object $obj) => (object) $data,
         );
 
         $rule = new MarshallingRule(type: \stdClass::class);

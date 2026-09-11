@@ -22,6 +22,7 @@ use Temporal\Internal\Queue\QueueInterface;
 use Temporal\Internal\ServiceContainer;
 use Temporal\Internal\Transport\ClientInterface;
 use Temporal\Internal\Transport\Router\InvokeActivity;
+use Temporal\Internal\Workflow\Logger;
 use Temporal\Tests\Unit\Framework\Requests\InvokeActivity as Request;
 use Temporal\Tests\Unit\AbstractUnit;
 use Temporal\Worker\Environment\EnvironmentInterface;

@@ -24,11 +24,17 @@ use Temporal\Worker\Transport\CommandBatch;
 class WorkerMock implements HostConnectionInterface
 {
     private WorkerFactoryInterface $factory;
+
     private array $in;
+
     private array $out;
+
     private int $indexIn;
+
     private int $indexOut;
+
     private bool $debug;
+
     private TestCase $testCase;
 
     public static function createMock(): WorkerMock

@@ -58,7 +58,7 @@ final class WorkflowExecutionInfoMapperTestCase extends TestCase
                             ->setFirstWorkflowTaskCompletedId(1)
                             ->setCreateTime(new Timestamp(['seconds' => \strtotime('2021-01-01T00:00:00.000000Z')]))
                             ->setResettable(true)
-                            ->setBinaryChecksum('binaryChecksum'),
+                            ->setBinaryChecksum('binaryChecksum')
                     ]),
                 'task_queue' => 'taskQueue',
                 'state_transition_count' => 1,

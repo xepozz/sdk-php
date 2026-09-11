@@ -88,10 +88,10 @@ final class WorkflowStarterTestCase extends TestCase
                 $this->callback(static function (StartWorkflowExecutionRequest $request) use (&$result) {
                     $result = $request;
                     return true;
-                }),
+                })
             )->willReturn(
                 (new StartWorkflowExecutionResponse())
-                    ->setRunId(self::WORKFLOW_RUN_ID),
+                    ->setRunId(self::WORKFLOW_RUN_ID)
             );
 
         $starter = new WorkflowStarter(
@@ -103,7 +103,7 @@ final class WorkflowStarterTestCase extends TestCase
 
         $execution = $starter->start($workflowType, $options, $args);
 
-        if ($execution->getRunID() !== self::WORKFLOW_RUN_ID) {
+        if (self::WORKFLOW_RUN_ID !== $execution->getRunID()) {
             $this->fail('Unexpected workflow run ID.');
         }
 

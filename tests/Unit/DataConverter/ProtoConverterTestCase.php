@@ -22,6 +22,11 @@ use Temporal\Tests\Unit\AbstractUnit;
  */
 class ProtoConverterTestCase extends AbstractUnit
 {
+    protected function create(): PayloadConverterInterface
+    {
+        return new ProtoConverter();
+    }
+
     public function testMessageType(): void
     {
         $converter = $this->create();
@@ -36,10 +41,5 @@ class ProtoConverterTestCase extends AbstractUnit
             'tests.Test',
             $payload->getMetadata()->offsetGet(EncodingKeys::METADATA_MESSAGE_TYPE),
         );
-    }
-
-    protected function create(): PayloadConverterInterface
-    {
-        return new ProtoConverter();
     }
 }

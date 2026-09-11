@@ -16,22 +16,10 @@ final class HistoryLengthWorkflowTestCase extends TestCase
     private WorkflowClient $workflowClient;
     private ActivityMocker $activityMocks;
 
-    public function testHistoryLengthIsUpdated(): void
-    {
-        $workflow = $this->workflowClient->newWorkflowStub(HistoryLengthWorkflow::class);
-        $run = $this->workflowClient->start($workflow, 'hello');
-
-        $result = $run->getResult('array');
-
-        $this->assertGreaterThan($result[1], $result[2]);
-        $this->assertGreaterThan($result[2], $result[3]);
-        $this->assertGreaterThan($result[3], $result[4]);
-    }
-
     protected function setUp(): void
     {
         $this->workflowClient = new WorkflowClient(
-            ServiceClient::create(TemporalServer::address()),
+            ServiceClient::create(TemporalServer::address())
         );
         $this->activityMocks = new ActivityMocker();
 
@@ -42,5 +30,17 @@ final class HistoryLengthWorkflowTestCase extends TestCase
     {
         $this->activityMocks->clear();
         parent::tearDown();
+    }
+
+    public function testHistoryLengthIsUpdated(): void
+    {
+        $workflow = $this->workflowClient->newWorkflowStub(HistoryLengthWorkflow::class);
+        $run = $this->workflowClient->start($workflow, 'hello');
+
+        $result = $run->getResult('array');
+
+        $this->assertGreaterThan($result[1], $result[2]);
+        $this->assertGreaterThan($result[2], $result[3]);
+        $this->assertGreaterThan($result[3], $result[4]);
     }
 }

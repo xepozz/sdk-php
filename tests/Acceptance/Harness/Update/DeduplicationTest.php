@@ -69,7 +69,7 @@ class FeatureWorkflow
     }
 
     #[Workflow\SignalMethod('unblock')]
-    public function unblock(): void
+    public function unblock()
     {
         $this->blocked = false;
     }

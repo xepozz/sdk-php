@@ -76,7 +76,7 @@ class FeatureWorkflow
                 ->withHeartbeatTimeout('5 seconds')
                 # Disable retry
                 ->withRetryOptions(RetryOptions::new()->withMaximumAttempts(1))
-                ->withCancellationType(Activity\ActivityCancellationType::TryCancel),
+                ->withCancellationType(Activity\ActivityCancellationType::TryCancel)
         );
 
         $scope = Workflow::async(static fn() => $activity->cancellableActivity());
@@ -98,7 +98,7 @@ class FeatureWorkflow
     }
 
     #[Workflow\SignalMethod('activity_result')]
-    public function activityResult(string $result): void
+    public function activityResult(string $result)
     {
         $this->result = $result;
     }
@@ -109,7 +109,8 @@ class FeatureActivity
 {
     public function __construct(
         private readonly WorkflowClientInterface $client,
-    ) {}
+    ) {
+    }
 
     /**
      * @return PromiseInterface<null>

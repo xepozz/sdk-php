@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 namespace Temporal\Tests\Acceptance\Harness\Update\NonDurableReject;
-
 use PHPUnit\Framework\Attributes\Test;
 use Temporal\Client\WorkflowClientInterface;
 use Temporal\Client\WorkflowStubInterface;

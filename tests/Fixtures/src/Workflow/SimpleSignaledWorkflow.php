@@ -21,8 +21,8 @@ class SimpleSignaledWorkflow
 
     #[Workflow\SignalMethod(name: "add")]
     public function add(
-        int $value,
-    ): void {
+        int $value
+    ) {
         $this->counter += $value;
     }
 

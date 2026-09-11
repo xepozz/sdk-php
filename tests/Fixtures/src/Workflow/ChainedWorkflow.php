@@ -26,12 +26,12 @@ class ChainedWorkflow
         return yield Workflow::executeActivity(
             'SimpleActivity.echo',
             [$input],
-            $opts,
-        )->then(static function ($result) use ($opts) {
+            $opts
+        )->then(function ($result) use ($opts) {
             return Workflow::executeActivity(
                 'SimpleActivity.lower',
                 ['Result:' . $result],
-                $opts,
+                $opts
             );
         });
     }

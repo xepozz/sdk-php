@@ -24,8 +24,8 @@ class WaitWorkflow
 
     #[SignalMethod]
     public function unlock(
-        string $value,
-    ): void {
+        string $value
+    ) {
         $this->ready = true;
         $this->value = $value;
     }

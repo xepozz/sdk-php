@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\DTO\Type\ObjectType;
 
+use ReflectionClass;
+use stdClass;
 use Temporal\Internal\Marshaller\Type\ObjectType;
 use Temporal\Tests\Unit\DTO\Type\ObjectType\Stub\ChildDto;
 use Temporal\Tests\Unit\DTO\Type\ObjectType\Stub\Nested1;
@@ -28,7 +30,7 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
     public function testReflectionTypeMarshal(): void
     {
         $dto = new ParentDto(
-            new ChildDto('foo'),
+            new ChildDto('foo')
         );
 
         $result = $this->marshal($dto);
@@ -40,17 +42,17 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
     {
         $dto = $this->unmarshal([
             'child' => ['foo' => 'bar'],
-        ], (new \ReflectionClass(ParentDto::class))->newInstanceWithoutConstructor());
+        ], (new ReflectionClass(ParentDto::class))->newInstanceWithoutConstructor());
 
         self::assertEquals(new ParentDto(
-            new ChildDto('bar'),
+            new ChildDto('bar')
         ), $dto);
     }
 
     public function testReadonlyMarshal(): void
     {
         $dto = new ReadonlyProperty(
-            new ChildDto('foo'),
+            new ChildDto('foo')
         );
 
         $result = $this->marshal($dto);
@@ -71,7 +73,7 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
     {
         $dto = $this->unmarshal([
             'child' => null,
-        ], (new \ReflectionClass(NullableProperty::class))->newInstanceWithoutConstructor());
+        ], (new ReflectionClass(NullableProperty::class))->newInstanceWithoutConstructor());
 
         self::assertEquals(new NullableProperty(null), $dto);
     }
@@ -81,11 +83,11 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
         $dto = $this->unmarshal([
             'object' => ['foo' => 'bar'],
             'class' => ['foo' => 'bar'],
-        ], (new \ReflectionClass(StdClassObjectProp::class))->newInstanceWithoutConstructor());
+        ], (new ReflectionClass(StdClassObjectProp::class))->newInstanceWithoutConstructor());
 
         self::assertEquals(new StdClassObjectProp(
-            (object) ['foo' => 'bar'],
-            (object) ['foo' => 'bar'],
+            (object)['foo' => 'bar'],
+            (object)['foo' => 'bar'],
         ), $dto);
     }
 
@@ -94,9 +96,9 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
         $dto = $this->unmarshal([
             'object' => ['foo' => 'bar'],
             'class' => ['foo' => 'bar'],
-        ], new \stdClass());
+        ], new stdClass());
 
-        self::assertEquals((object) [
+        self::assertEquals((object)[
             'object' => ['foo' => 'bar'],
             'class' => ['foo' => 'bar'],
         ], $dto);
@@ -106,17 +108,17 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
     {
         $dto = $this->unmarshal([
             'child' => ['foo' => 'bar'],
-        ], (new \ReflectionClass(ReadonlyProperty::class))->newInstanceWithoutConstructor());
+        ], (new ReflectionClass(ReadonlyProperty::class))->newInstanceWithoutConstructor());
 
         self::assertEquals(new ReadonlyProperty(
-            new ChildDto('bar'),
+            new ChildDto('bar')
         ), $dto);
     }
 
     public function testNestedMarshal(): void
     {
         $dto = new NestedParent(
-            new Nested1(new Nested2(new Nested3('bar'))),
+            new Nested1(new Nested2(new Nested3('bar')))
         );
 
         $marshal = $this->marshal($dto);
@@ -127,12 +129,12 @@ final class ObjectTypeTestCase extends AbstractDTOMarshalling
     public function testNestedUnmarshal(): void
     {
         $dto = new NestedParent(
-            new Nested1(new Nested2(new Nested3('bar'))),
+            new Nested1(new Nested2(new Nested3('bar')))
         );
 
         $unmarshal = $this->unmarshal(
             ['child' => ['child' => ['child' => ['value' => 'bar']]]],
-            (new \ReflectionClass(NestedParent::class))->newInstanceWithoutConstructor(),
+            (new ReflectionClass(NestedParent::class))->newInstanceWithoutConstructor(),
         );
 
         $this->assertEquals($dto, $unmarshal);

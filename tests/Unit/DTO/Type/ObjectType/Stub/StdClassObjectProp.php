@@ -11,10 +11,13 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Unit\DTO\Type\ObjectType\Stub;
 
+use stdClass;
+
 final class StdClassObjectProp
 {
     public function __construct(
         public object $object,
-        public \stdClass $class,
-    ) {}
+        public stdClass $class,
+    ) {
+    }
 }

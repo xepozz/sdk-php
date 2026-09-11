@@ -30,6 +30,12 @@ class CodecTest extends TestCase
 {
     private ResultInterceptor $interceptor;
 
+    protected function setUp(): void
+    {
+        $this->interceptor = new ResultInterceptor();
+        parent::setUp();
+    }
+
     public function pipelineProvider(): PipelineProvider
     {
         return new SimplePipelineProvider([$this->interceptor]);
@@ -40,8 +46,8 @@ class CodecTest extends TestCase
         #[Stub('Harness_DataConverter_Codec', args: [EXPECTED_RESULT])]
         #[Client(
             pipelineProvider: [self::class, 'pipelineProvider'],
-            payloadConverters: [Base64PayloadCodec::class],
-        ),]
+            payloadConverters: [Base64PayloadCodec::class]),
+        ]
         WorkflowStubInterface $stub,
     ): void {
         $result = $stub->getResult();
@@ -65,12 +71,6 @@ class CodecTest extends TestCase
         self::assertSame(CODEC_ENCODING, $inputPayload->getMetadata()['encoding']);
         self::assertSame(\base64_encode('{"spec":true}'), $inputPayload->getData());
     }
-
-    protected function setUp(): void
-    {
-        $this->interceptor = new ResultInterceptor();
-        parent::setUp();
-    }
 }
 
 #[WorkflowInterface]
@@ -89,10 +89,8 @@ class FeatureWorkflow
 class ResultInterceptor implements WorkflowClientCallsInterceptor
 {
     use WorkflowClientCallsInterceptorTrait;
-
     public ?EncodedValues $result = null;
     public ?EncodedValues $start = null;
-
     public function getResult(GetResultInput $input, callable $next): ?EncodedValues
     {
         return $this->result = $next($input);

@@ -17,20 +17,21 @@ use Temporal\DataConverter\Type;
 use Temporal\Tests\DTO\Message;
 use Temporal\Workflow;
 use Temporal\Workflow\WorkflowMethod;
+use Temporal\Tests\Activity\SimpleActivity;
 
 #[Workflow\WorkflowInterface]
 class ArrayOfObjectsWorkflow
 {
     #[WorkflowMethod(name: 'ArrayOfObjectsWorkflow')]
     public function handler(
-        string $input,
+        string $input
     ): iterable {
         $activity = Workflow::newUntypedActivityStub(
             ActivityOptions::new()
                 ->withStartToCloseTimeout(5)
                 ->withRetryOptions(
-                    RetryOptions::new()->withMaximumAttempts(2),
-                ),
+                    RetryOptions::new()->withMaximumAttempts(2)
+                )
         );
 
         return yield $activity->execute('SimpleActivity.arrayOfObjects', [$input], Type::arrayOf(Message::class));

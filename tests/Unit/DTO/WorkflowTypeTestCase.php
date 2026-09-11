@@ -23,7 +23,7 @@ class WorkflowTypeTestCase extends AbstractDTOMarshalling
         $dto = new WorkflowType();
 
         $expected = [
-            'Name' => '',
+            'Name' => ''
         ];
 
         $this->assertSame($expected, $this->marshal($dto));

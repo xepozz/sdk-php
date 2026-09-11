@@ -41,7 +41,7 @@ final class RoadRunnerTestCase extends AbstractUnit
         $checker = new RoadRunnerVersionChecker(checker: new VersionChecker(
             installedVersion: $installed,
             requiredVersion: $required,
-            comparator: $comparator,
+            comparator: $comparator
         ));
 
         RoadRunner::create(versionChecker: $checker);

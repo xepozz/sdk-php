@@ -55,7 +55,7 @@ class FeatureWorkflow
         yield Workflow::await(fn() => $this->upd2);
         Workflow::getUpdateContext() === null and throw new \RuntimeException('Update context should not be null.');
         $updateId !== Workflow::getUpdateContext()->getUpdateID() and throw new \RuntimeException(
-            'Update ID should not change.',
+            'Update ID should not change.'
         );
 
         $this->done = true;

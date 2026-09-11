@@ -32,6 +32,7 @@ use Temporal\Tests\Acceptance\App\Runtime\ContainerFacade;
 use Temporal\Tests\Acceptance\App\Runtime\Feature;
 use Temporal\Tests\Acceptance\App\Runtime\RRStarter;
 use Temporal\Tests\Acceptance\App\Runtime\State;
+use Temporal\Tests\Acceptance\App\Runtime\TemporalStarter;
 
 abstract class TestCase extends \Temporal\Tests\TestCase
 {
@@ -190,6 +191,12 @@ abstract class TestCase extends \Temporal\Tests\TestCase
         );
     }
 
+    private static function shouldDumpTranscriptOnFail(): bool
+    {
+        $flag = \getenv('TEMPORAL_TRANSCRIPT_DUMP_ON_FAIL');
+        return \is_string($flag) && !\in_array(\strtolower($flag), ['', '0', 'false', 'off', 'no'], true);
+    }
+
     /**
      * @return list<TranscriptLine>
      */
@@ -200,12 +207,6 @@ abstract class TestCase extends \Temporal\Tests\TestCase
             return [];
         }
         return $run->reader()->linesForTest(static::class, $this->name());
-    }
-
-    private static function shouldDumpTranscriptOnFail(): bool
-    {
-        $flag = \getenv('TEMPORAL_TRANSCRIPT_DUMP_ON_FAIL');
-        return \is_string($flag) && !\in_array(\strtolower($flag), ['', '0', 'false', 'off', 'no'], true);
     }
 
     private function printWorkflowHistory(WorkflowClientInterface $workflowClient, array $args): void

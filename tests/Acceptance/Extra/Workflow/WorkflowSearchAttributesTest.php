@@ -72,7 +72,7 @@ class TestWorkflow
         return yield Workflow::newChildWorkflowStub(
             TestWorkflowChild::class,
             Workflow\ChildWorkflowOptions::new()
-                ->withSearchAttributes($searchAttributes),
+                ->withSearchAttributes($searchAttributes)
         )->handle();
     }
 }

@@ -34,7 +34,7 @@ class CancelledSingleScopeWorkflow
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
             ActivityOptions::new()
-                ->withStartToCloseTimeout(5),
+                ->withStartToCloseTimeout(5)
         );
 
         $this->status[] = 'start';
@@ -49,11 +49,11 @@ class CancelledSingleScopeWorkflow
                         $this->status[] = 'captured in scope';
                         throw $e;
                     }
-                },
+                }
             )->onCancel(
-                function (): void {
+                function () {
                     $this->status[] = 'on cancel';
-                },
+                }
             );
         } catch (CanceledFailure $e) {
             $this->status[] = 'captured in process';

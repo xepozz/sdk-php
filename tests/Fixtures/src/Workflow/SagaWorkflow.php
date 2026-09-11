@@ -26,7 +26,7 @@ class SagaWorkflow
             SimpleActivity::class,
             ActivityOptions::new()
                 ->withStartToCloseTimeout(60)
-                ->withRetryOptions(RetryOptions::new()->withMaximumAttempts(1)),
+                ->withRetryOptions(RetryOptions::new()->withMaximumAttempts(1))
         );
 
         $saga = new Workflow\Saga();
@@ -35,16 +35,16 @@ class SagaWorkflow
         try {
             yield $simple->echo('test');
             $saga->addCompensation(
-                static function () use ($simple) {
+                function () use ($simple) {
                     yield $simple->slow('compensate echo');
-                },
+                }
             );
 
             yield $simple->lower('TEST');
             $saga->addCompensation(
-                static function () use ($simple) {
+                function () use ($simple) {
                     yield $simple->prefix('prefix', 'COMPENSATE LOWER');
-                },
+                }
             );
 
             yield $simple->fail();

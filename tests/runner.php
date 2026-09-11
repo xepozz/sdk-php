@@ -16,7 +16,7 @@ $logFile = 'runtime/phpunit.xml';
 if (\file_exists($logFile)) {
     $xml = @\simplexml_load_file($logFile);
     if ($xml !== false) {
-        $failures = (int) $xml->testsuite['failures'] + (int) $xml->testsuite['errors'];
+        $failures = (int)$xml->testsuite['failures'] + (int)$xml->testsuite['errors'];
 
         if ($failures === 0) {
             exit(0);

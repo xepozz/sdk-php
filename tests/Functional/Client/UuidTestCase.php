@@ -31,7 +31,7 @@ class UuidTestCase extends AbstractClient
         $result = $workflow->handler($uuid);
 
         $this->assertInstanceOf(UuidInterface::class, $result);
-        $this->assertSame((string) $uuid, (string) $result);
+        $this->assertSame((string)$uuid, (string)$result);
     }
 
     public function testSideEffectWithUuid(): void
@@ -49,6 +49,6 @@ class UuidTestCase extends AbstractClient
         );
 
         $this->assertInstanceOf(UuidInterface::class, $result);
-        $this->assertSame((string) $uuid, (string) $result);
+        $this->assertSame((string)$uuid, (string)$result);
     }
 }

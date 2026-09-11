@@ -26,7 +26,7 @@ use Temporal\Tests\Activity\ExternalActivityFixturePaths;
  */
 class ActivityCompletionClientTestCase extends AbstractClient
 {
-    public function testCompleteAsyncActivityById(): void
+    public function testCompleteAsyncActivityById()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -35,11 +35,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(2);
+        sleep(2);
         $this->assertFileExists(ExternalActivityFixturePaths::idPath());
-        $data = \json_decode(\file_get_contents(ExternalActivityFixturePaths::idPath()));
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $data = json_decode(file_get_contents(ExternalActivityFixturePaths::idPath()));
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -48,7 +48,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertSame('Completed Externally by ID', $simple->getResult(0));
     }
 
-    public function testCompleteAsyncActivityByIdExplicit(): void
+    public function testCompleteAsyncActivityByIdExplicit()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -57,11 +57,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::idPath());
-        $data = \json_decode(\file_get_contents(ExternalActivityFixturePaths::idPath()));
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $data = json_decode(file_get_contents(ExternalActivityFixturePaths::idPath()));
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -70,7 +70,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertSame('Completed Externally by ID explicit', $simple->getResult(0));
     }
 
-    public function testCompleteAsyncActivityByIdInvalid(): void
+    public function testCompleteAsyncActivityByIdInvalid()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -79,11 +79,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::idPath());
-        $data = \json_decode(\file_get_contents(ExternalActivityFixturePaths::idPath()));
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $data = json_decode(file_get_contents(ExternalActivityFixturePaths::idPath()));
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -96,7 +96,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $act->complete($data->id, $data->runId, $data->activityId, 'Completed Externally by ID explicit');
     }
 
-    public function testCompleteAsyncActivityByToken(): void
+    public function testCompleteAsyncActivityByToken()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -105,11 +105,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $taskToken = \file_get_contents(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $taskToken = file_get_contents(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -118,7 +118,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertSame('Completed Externally', $simple->getResult(0));
     }
 
-    public function testCompleteAsyncActivityByTokenInvalid(): void
+    public function testCompleteAsyncActivityByTokenInvalid()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -127,12 +127,12 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $taskToken = \file_get_contents(ExternalActivityFixturePaths::tokenPath());
+        $taskToken = file_get_contents(ExternalActivityFixturePaths::tokenPath());
 
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -145,7 +145,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $act->completeByToken($taskToken, 'Completed Externally by broken token');
     }
 
-    public function testCompleteAsyncActivityByTokenExceptionally(): void
+    public function testCompleteAsyncActivityByTokenExceptionally()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -154,11 +154,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $taskToken = \file_get_contents(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $taskToken = file_get_contents(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -176,7 +176,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         }
     }
 
-    public function testCompleteAsyncActivityByTokenExceptionallyById(): void
+    public function testCompleteAsyncActivityByTokenExceptionallyById()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -185,11 +185,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(2);
+        sleep(2);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $data = \json_decode(\file_get_contents(ExternalActivityFixturePaths::idPath()));
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $data = json_decode(file_get_contents(ExternalActivityFixturePaths::idPath()));
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -197,7 +197,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
             $data->id,
             $data->runId,
             $data->activityId,
-            new \Error('manually triggered 2'),
+            new \Error('manually triggered 2')
         );
 
         try {
@@ -213,7 +213,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
         }
     }
 
-    public function testHeartBeatByID(): void
+    public function testHeartBeatByID()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -222,11 +222,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $data = \json_decode(\file_get_contents(ExternalActivityFixturePaths::idPath()));
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $data = json_decode(file_get_contents(ExternalActivityFixturePaths::idPath()));
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -234,7 +234,7 @@ class ActivityCompletionClientTestCase extends AbstractClient
             $data->id,
             $data->runId,
             $data->activityId,
-            'heardbeatdata',
+            'heardbeatdata'
         );
 
         $r = new DescribeWorkflowExecutionRequest();
@@ -246,21 +246,21 @@ class ActivityCompletionClientTestCase extends AbstractClient
         /** @var PendingActivityInfo $pa */
         $pa = $d->getPendingActivities()->offsetGet(0);
         $this->assertSame(
-            \json_encode('heardbeatdata'),
-            $pa->getHeartbeatDetails()->getPayloads()->offsetGet(0)->getData(),
+            json_encode('heardbeatdata'),
+            $pa->getHeartbeatDetails()->getPayloads()->offsetGet(0)->getData()
         );
 
         $act->complete(
             $data->id,
             $data->runId,
             $data->activityId,
-            'Completed Externally',
+            'Completed Externally'
         );
 
         $simple->getResult(0);
     }
 
-    public function testHeartBeatByToken(): void
+    public function testHeartBeatByToken()
     {
         $client = $this->createClient();
         $simple = $client->newUntypedWorkflowStub('AsyncActivityWorkflow');
@@ -269,11 +269,11 @@ class ActivityCompletionClientTestCase extends AbstractClient
         $this->assertNotEmpty($e->getExecution()->getID());
         $this->assertNotEmpty($e->getExecution()->getRunID());
 
-        \sleep(1);
+        sleep(1);
         $this->assertFileExists(ExternalActivityFixturePaths::tokenPath());
-        $taskToken = \file_get_contents(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::tokenPath());
-        \unlink(ExternalActivityFixturePaths::idPath());
+        $taskToken = file_get_contents(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::tokenPath());
+        unlink(ExternalActivityFixturePaths::idPath());
 
         $act = $client->newActivityCompletionClient();
 
@@ -288,31 +288,31 @@ class ActivityCompletionClientTestCase extends AbstractClient
         /** @var PendingActivityInfo $pa */
         $pa = $d->getPendingActivities()->offsetGet(0);
         $this->assertSame(
-            \json_encode('heardbeatdata'),
-            $pa->getHeartbeatDetails()->getPayloads()->offsetGet(0)->getData(),
+            json_encode('heardbeatdata'),
+            $pa->getHeartbeatDetails()->getPayloads()->offsetGet(0)->getData()
         );
 
         $act->completeByToken($taskToken, 'Completed Externally');
         $simple->getResult(0);
     }
 
-    //    public function testCanceledActivityInWorkflow()
-    //    {
-    //        $client = $this->createClient();
-    //        $w = $client->newWorkflowStub(CanceledHeartbeatWorkflow::class);
-    //
-    //        /** @var WorkflowStubInterface $r */
-    //        $r = $w->startAsync();
-    //        sleep(1);
-    //
-    //        $uw = $client->newUntypedWorkflowStub('CanceledHeartbeatWorkflow')->setExecution($r->getExecution());
-    //        $uw->cancel();
-    //
-    //        try {
-    //            $r->getResult();
-    //            $this->fail('unreachable');
-    //        } catch (WorkflowFailedException $e) {
-    //            $this->assertInstanceOf(CanceledFailure::class, $e->getPrevious());
-    //        }
-    //    }
+//    public function testCanceledActivityInWorkflow()
+//    {
+//        $client = $this->createClient();
+//        $w = $client->newWorkflowStub(CanceledHeartbeatWorkflow::class);
+//
+//        /** @var WorkflowStubInterface $r */
+//        $r = $w->startAsync();
+//        sleep(1);
+//
+//        $uw = $client->newUntypedWorkflowStub('CanceledHeartbeatWorkflow')->setExecution($r->getExecution());
+//        $uw->cancel();
+//
+//        try {
+//            $r->getResult();
+//            $this->fail('unreachable');
+//        } catch (WorkflowFailedException $e) {
+//            $this->assertInstanceOf(CanceledFailure::class, $e->getPrevious());
+//        }
+//    }
 }

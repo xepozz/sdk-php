@@ -21,15 +21,6 @@ class GrpcClientInterceptor extends TestCase
     /** @var array<non-empty-string, object> */
     protected array $called = [];
 
-    public function testParentCanWaitForChildResult(): void
-    {
-        $workflow = $this->workflowClient->newWorkflowStub(SimpleWorkflow::class);
-        $run = $this->workflowClient->start($workflow, 'foo');
-
-        self::assertArrayHasKey('StartWorkflowExecution', $this->called);
-        self::assertSame('FOO', $run->getResult());
-    }
-
     /**
      * @psalm-suppress MissingImmutableAnnotation
      */
@@ -40,7 +31,7 @@ class GrpcClientInterceptor extends TestCase
             ServiceClient::create($temporalAddress)
                 ->withInterceptorPipeline(
                     Pipeline::prepare([
-                        new class($this->called) implements \Temporal\Interceptor\GrpcClientInterceptor {
+                        new class ($this->called) implements \Temporal\Interceptor\GrpcClientInterceptor {
                             private array $called;
 
                             public function __construct(array &$called)
@@ -59,10 +50,19 @@ class GrpcClientInterceptor extends TestCase
                             }
                         },
                     ]),
-                ),
+                )
         );
         $this->testingService = TestService::create($temporalAddress);
 
         parent::setUp();
+    }
+
+    public function testParentCanWaitForChildResult(): void
+    {
+        $workflow = $this->workflowClient->newWorkflowStub(SimpleWorkflow::class);
+        $run = $this->workflowClient->start($workflow, 'foo');
+
+        self::assertArrayHasKey('StartWorkflowExecution', $this->called);
+        self::assertSame('FOO', $run->getResult());
     }
 }

@@ -15,5 +15,6 @@ final class ChildDto
 {
     public function __construct(
         public string $foo,
-    ) {}
+    ) {
+    }
 }

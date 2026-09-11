@@ -12,6 +12,7 @@ use Temporal\Client\WorkflowStubInterface;
 use Temporal\Common\RetryOptions;
 use Temporal\Exception\Failure\ApplicationFailure;
 use Temporal\Tests\Acceptance\App\Attribute\Stub;
+use Temporal\Testing\Transcript\TranscriptLine;
 use Temporal\Testing\Transcript\TranscriptSection;
 use Temporal\Tests\Acceptance\App\TestCase;
 use Temporal\Workflow;

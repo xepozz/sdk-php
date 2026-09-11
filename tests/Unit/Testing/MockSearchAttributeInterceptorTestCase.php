@@ -18,6 +18,14 @@ final class MockSearchAttributeInterceptorTestCase extends TestCase
     private InMemorySearchAttributeInvocationCache $cache;
     private MockSearchAttributeInterceptor $interceptor;
 
+    protected function setUp(): void
+    {
+        $this->cache = new InMemorySearchAttributeInvocationCache();
+        $this->interceptor = new MockSearchAttributeInterceptor($this->cache);
+
+        parent::setUp();
+    }
+
     public function testTypedUpsertIsSwallowedAndRecorded(): void
     {
         $request = new UpsertTypedSearchAttributes([
@@ -110,13 +118,5 @@ final class MockSearchAttributeInterceptorTestCase extends TestCase
             $forwarded = $value;
         });
         self::assertSame($request, $forwarded);
-    }
-
-    protected function setUp(): void
-    {
-        $this->cache = new InMemorySearchAttributeInvocationCache();
-        $this->interceptor = new MockSearchAttributeInterceptor($this->cache);
-
-        parent::setUp();
     }
 }

@@ -15,5 +15,6 @@ final class NullableProperty
 {
     public function __construct(
         public ?ChildDto $child,
-    ) {}
+    ) {
+    }
 }

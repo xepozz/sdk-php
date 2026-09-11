@@ -325,7 +325,7 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
                         ActivityOptions::new()->withStartToCloseTimeout(5),
                     );
                 }
-            },
+            }
         );
 
         $replaying

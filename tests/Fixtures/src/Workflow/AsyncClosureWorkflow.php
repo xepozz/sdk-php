@@ -20,23 +20,23 @@ class AsyncClosureWorkflow
 {
     private array $result = [];
 
-    #[WorkflowMethod]
+    #[WorkflowMethod()]
     public function handler()
     {
         $promise = Workflow::async(
             function (): \Generator {
                 yield Workflow::async(fn() => $this->result[] = 'before');
-                yield Workflow::awaitWithTimeout(999, static fn() => false);
+                yield Workflow::awaitWithTimeout(999, fn() => false);
                 yield Workflow::async(fn() => $this->result[] = 'after');
-            },
+            }
         );
 
         yield Workflow::async(
             function () use ($promise): \Generator {
-                yield Workflow::await(fn() => \count($this->result) === 1);
+                yield Workflow::await(fn() => count($this->result) === 1);
                 yield Workflow::timer(1);
                 $promise->cancel();
-            },
+            }
         );
 
         try {
@@ -44,6 +44,6 @@ class AsyncClosureWorkflow
         } catch (CanceledFailure $exception) {
         }
 
-        return \implode(' ', $this->result);
+        return implode(' ', $this->result);
     }
 }

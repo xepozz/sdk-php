@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Workflow;
 
+use DateTimeImmutable;
+use DateTimeInterface;
+use Generator;
 use React\Promise\PromiseInterface;
 use Temporal\Exception\Failure\ApplicationFailure;
 use Temporal\Workflow;
@@ -36,7 +39,7 @@ class TestContextLeakWorkflow
 
         $this->timer = new CustomTimer(Workflow::getInfo()->execution);
 
-        $timer = yield $this->timer->sleepUntil(new \DateTimeImmutable('@' . (Workflow::now()->getTimestamp() + 5)));
+        $timer = yield $this->timer->sleepUntil(new DateTimeImmutable('@' . (Workflow::now()->getTimestamp() + 5)));
 
         $this->checkContext();
 
@@ -51,8 +54,8 @@ class TestContextLeakWorkflow
         $this->checkContext();
     }
 
-    #[Workflow\QueryMethod]
-    public function wakeup(): \DateTimeInterface
+    #[Workflow\QueryMethod()]
+    public function wakeup(): DateTimeInterface
     {
         $this->checkContext();
         return $this->timer->getWakeUpTime();
@@ -69,21 +72,22 @@ class TestContextLeakWorkflow
 
 class CustomTimer
 {
-    private \DateTimeInterface $wakeUpTime;
+    private DateTimeInterface $wakeUpTime;
     private bool $isWakeUpTimeUpdated = false;
     private bool $isCancelled = false;
 
     public function __construct(
         private WorkflowExecution $execution,
-    ) {}
+    ) {
+    }
 
     /**
      * Returns a promise that resolves to
      *  - `true` if the timer sleeps until `$wakeUpTime`.
      *  - `false` if the timer was interrupted by a cancellation, or if `$wakeUpTime` is in the past.
-     * @return \Generator<int, PromiseInterface<bool>, bool, PromiseInterface<bool>>
+     * @return Generator<int, PromiseInterface<bool>, bool, PromiseInterface<bool>>
      */
-    public function sleepUntil(\DateTimeInterface $wakeUpTime): \Generator
+    public function sleepUntil(DateTimeInterface $wakeUpTime): Generator
     {
         $this->wakeUpTime = $wakeUpTime;
 
@@ -113,13 +117,13 @@ class CustomTimer
         }
     }
 
-    public function updateWakeUpTime(\DateTimeInterface $wakeUpTime): void
+    public function updateWakeUpTime(DateTimeInterface $wakeUpTime): void
     {
         $this->wakeUpTime = $wakeUpTime;
         $this->isWakeUpTimeUpdated = true;
     }
 
-    public function getWakeUpTime(): \DateTimeInterface
+    public function getWakeUpTime(): DateTimeInterface
     {
         return $this->wakeUpTime;
     }

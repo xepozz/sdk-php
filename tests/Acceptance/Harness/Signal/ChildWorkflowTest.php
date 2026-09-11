@@ -33,7 +33,7 @@ class FeatureWorkflow
             ChildWorkflow::class,
             Workflow\ChildWorkflowOptions::new()
                 // TODO: remove after https://github.com/temporalio/sdk-php/issues/451 is fixed
-                ->withTaskQueue(Workflow::getInfo()->taskQueue),
+                ->withTaskQueue(Workflow::getInfo()->taskQueue)
         );
         $handle = $wf->run();
 
@@ -55,7 +55,7 @@ class ChildWorkflow
     }
 
     #[SignalMethod('my_signal')]
-    public function mySignal(string $arg): void
+    public function mySignal(string $arg)
     {
         $this->value = $arg;
     }

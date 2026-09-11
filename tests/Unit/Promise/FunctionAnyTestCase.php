@@ -24,10 +24,10 @@ final class FunctionAnyTestCase extends BaseFunction
             ->expects($this->once())
             ->method('__invoke')
             ->with(
-                $this->callback(static function ($exception) {
+                $this->callback(function ($exception) {
                     return $exception instanceof LengthException &&
-                        $exception->getMessage() === 'Input array must contain at least 1 item but contains only 0 items.';
-                }),
+                        'Input array must contain at least 1 item but contains only 0 items.' === $exception->getMessage();
+                })
             );
 
         Promise::any([])
@@ -68,7 +68,7 @@ final class FunctionAnyTestCase extends BaseFunction
         $mock
             ->expects($this->once())
             ->method('__invoke')
-            ->with($this->callback(static fn(Reasons $e): bool => \iterator_to_array($e) === [0 => $e1, 1 => $e2, 2 => $e3]));
+            ->with($this->callback(fn (Reasons $e): bool => \iterator_to_array($e) === [0 => $e1, 1 => $e2, 2 => $e3]));
 
         Promise::any([Promise::reject($e1), Promise::reject($e2), Promise::reject($e3)])
             ->then($this->expectCallableNever(), $mock);
@@ -112,11 +112,11 @@ final class FunctionAnyTestCase extends BaseFunction
             ->expects($this->once())
             ->method('__invoke')
             // ->with($this->identicalTo(null));
-            ->with($this->callback(static fn(Reasons $reason): bool => \iterator_to_array($reason) === [$e]));
+            ->with($this->callback(fn (Reasons $reason): bool => \iterator_to_array($reason) === [$e]));
 
         Promise::any([Promise::reject($e)])
             ->then($this->expectCallableNever(), $mock)
-            ->then(null, static fn(\Throwable $e) => null);
+            ->then(null, fn(\Throwable $e) => null);
     }
 
     public function testCancelInputPromise(): void

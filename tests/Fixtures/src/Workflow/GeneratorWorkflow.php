@@ -23,19 +23,19 @@ class GeneratorWorkflow
 {
     #[WorkflowMethod(name: 'GeneratorWorkflow')]
     public function handler(
-        string $input,
+        string $input
     ) {
         // typed stub
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
             ActivityOptions::new()->withStartToCloseTimeout(5)->withRetryOptions(
-                RetryOptions::new()->withMaximumAttempts(1),
-            ),
+                RetryOptions::new()->withMaximumAttempts(1)
+            )
         );
 
         return [
             yield $this->doSomething($simple, $input),
-            yield $this->doSomething($simple, 'another'),
+            yield $this->doSomething($simple, 'another')
         ];
     }
 

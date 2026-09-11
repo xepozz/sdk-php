@@ -37,14 +37,14 @@ final class MutexTestCase extends TestCase
         $mutex = new Mutex();
         $this->assertTrue($mutex->tryLock());
 
-        $mutex->lock()->then(static function (Mutex $mutex) use (&$result): void {
+        $mutex->lock()->then(function (Mutex $mutex) use (&$result) {
             $result[0] = true;
             $mutex->unlock();
         });
-        $mutex->lock()->then(static function () use (&$result): void {
+        $mutex->lock()->then(function () use (&$result) {
             $result[1] = true;
         });
-        $mutex->lock()->then(static function () use (&$result): void {
+        $mutex->lock()->then(function () use (&$result) {
             $result[2] = true;
         });
 

@@ -25,6 +25,12 @@ final class WorkflowInteractionsTestCase extends TestCase
 {
     private DataConverterInterface $converter;
 
+    protected function setUp(): void
+    {
+        $this->converter = DataConverter::createDefault();
+        parent::setUp();
+    }
+
     public function testActivityCallCount(): void
     {
         $interactions = WorkflowInteractions::fromEvents([
@@ -111,12 +117,6 @@ final class WorkflowInteractionsTestCase extends TestCase
 
         $this->expectException(AssertionFailedError::class);
         $interactions->assertNoOtherActivities();
-    }
-
-    protected function setUp(): void
-    {
-        $this->converter = DataConverter::createDefault();
-        parent::setUp();
     }
 
     /**

@@ -15,5 +15,6 @@ final class Nested1
 {
     public function __construct(
         public Nested2 $child,
-    ) {}
+    ) {
+    }
 }

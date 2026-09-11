@@ -14,29 +14,35 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/**
- * @ActivityInterface
- */
+/** @ActivityInterface */
 #[ActivityInterface]
 class ActivitiesWithPublicMethods
 {
-    public static function notReadablePublicStaticMethod(): void {}
+    public function a(): void
+    {
+    }
 
-    public function a(): void {}
-
-    /**
-     * @ActivityMethod
-     */
+    /** @ActivityMethod */
     #[ActivityMethod]
-    public function b(): void {}
+    public function b(): void
+    {
+    }
 
-    /**
-     * @ActivityMethod(name="c")
-     */
+    /** @ActivityMethod(name="c") */
     #[ActivityMethod(name: 'c')]
-    public function test(): void {}
+    public function test(): void
+    {
+    }
 
-    protected function notReadableProtectedMethod(): void {}
+    private function notReadablePrivateMethod(): void
+    {
+    }
 
-    private function notReadablePrivateMethod(): void {}
+    protected function notReadableProtectedMethod(): void
+    {
+    }
+
+    public static function notReadablePublicStaticMethod(): void
+    {
+    }
 }

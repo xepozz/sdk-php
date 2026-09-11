@@ -26,6 +26,15 @@ final class MockChildWorkflowInterceptorTestCase extends TestCase
     private WorkflowMocker $mocker;
     private MockChildWorkflowInterceptor $interceptor;
 
+    protected function setUp(): void
+    {
+        $this->cache = new InMemoryChildWorkflowInvocationCache();
+        $this->mocker = new WorkflowMocker($this->cache);
+        $this->interceptor = new MockChildWorkflowInterceptor($this->cache);
+
+        parent::setUp();
+    }
+
     public function testMockedChildWorkflowResolvesWithoutCallingNext(): void
     {
         $this->mocker->expectCompletion('SimpleWorkflow', 'mocked-result');
@@ -185,15 +194,6 @@ final class MockChildWorkflowInterceptorTestCase extends TestCase
         );
 
         self::assertTrue($nextCalled);
-    }
-
-    protected function setUp(): void
-    {
-        $this->cache = new InMemoryChildWorkflowInvocationCache();
-        $this->mocker = new WorkflowMocker($this->cache);
-        $this->interceptor = new MockChildWorkflowInterceptor($this->cache);
-
-        parent::setUp();
     }
 
     private function resolveChild(string $workflowType, array $input): mixed

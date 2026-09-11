@@ -40,7 +40,7 @@ class UpdateWithStartTest extends TestCase
         $stub->signal('exit');
         $result = $stub->getResult();
 
-        $this->assertSame(['key' => null], (array) $result);
+        $this->assertSame(['key' => null], (array)$result);
         $this->assertFalse($handle->hasResult());
     }
 
@@ -157,6 +157,7 @@ class TestWorkflow
 
     /**
      * @param non-empty-string $name
+     * @return mixed
      */
     #[Workflow\UpdateMethod(name: 'await')]
     public function add(string $name): mixed

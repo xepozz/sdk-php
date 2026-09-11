@@ -18,9 +18,16 @@ use function PHPUnit\Framework\assertFalse;
 final class WorkerTestCase extends AbstractUnit
 {
     private WorkerFactoryInterface $factory;
-
     /** @var WorkerMock|WorkerInterface */
     private $worker;
+
+    protected function setUp(): void
+    {
+        $this->factory = WorkerFactoryMock::create();
+        $this->worker = $this->factory->newWorker();
+
+        parent::setUp();
+    }
 
     public function testRunWorker(): void
     {
@@ -31,23 +38,15 @@ final class WorkerTestCase extends AbstractUnit
                 #[WorkflowMethod(name: 'SimpleWorkflow')]
                 public function handler(): iterable
                 {
-                    $result = yield Workflow::awaitWithTimeout(5, static fn() => false);
+                    $result = yield Workflow::awaitWithTimeout(5, fn() => false);
                     assertFalse($result);
                     return $result;
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('SimpleWorkflow');
         $this->worker->expectTimer(5);
         $this->factory->run($this->worker);
-    }
-
-    protected function setUp(): void
-    {
-        $this->factory = WorkerFactoryMock::create();
-        $this->worker = $this->factory->newWorker();
-
-        parent::setUp();
     }
 }

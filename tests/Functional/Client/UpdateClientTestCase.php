@@ -83,10 +83,8 @@ class UpdateClientTestCase extends AbstractClient
      */
     private function createUpdateWorkflow(WorkflowClient $client)
     {
-        return $client->newWorkflowStub(
-            UpdateWorkflow::class,
-            WorkflowOptions::new()
-                ->withWorkflowRunTimeout('10 seconds'),
+        return $client->newWorkflowStub(UpdateWorkflow::class, WorkflowOptions::new()
+            ->withWorkflowRunTimeout('10 seconds')
         );
     }
 

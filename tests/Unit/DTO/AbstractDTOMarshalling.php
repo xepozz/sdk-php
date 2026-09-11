@@ -27,15 +27,21 @@ use Temporal\Tests\Unit\AbstractUnit;
  */
 abstract class AbstractDTOMarshalling extends AbstractUnit
 {
+    /**
+     * @var MarshallerInterface
+     */
     protected MarshallerInterface $marshaller;
 
+    /**
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
 
         $this->marshaller = new Marshaller(
             new AttributeMapperFactory(
-                new AttributeReader(),
+                new AttributeReader()
             ),
             $this->getTypeMatchers(),
         );
@@ -52,6 +58,8 @@ abstract class AbstractDTOMarshalling extends AbstractUnit
     }
 
     /**
+     * @param object $object
+     * @return array
      * @throws \ReflectionException
      */
     protected function marshal(object $object): array
@@ -61,6 +69,7 @@ abstract class AbstractDTOMarshalling extends AbstractUnit
 
     /**
      * @template T of object
+     * @param array $payload
      * @param T $to
      * @return T
      * @throws \ReflectionException

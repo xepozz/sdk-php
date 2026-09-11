@@ -33,70 +33,8 @@ use Temporal\Workflow\WorkflowExecution;
 final class WorkflowStubTestCase extends TestCase
 {
     private WorkflowStub $workflowStub;
-
     /** @var MockObject|ServiceClientInterface */
     private $serviceClient;
-
-    public function testSignalThrowsWorkflowNotFoundException(): void
-    {
-        $status = new \stdClass();
-        $status->details = 'status details';
-        $status->code = StatusCode::NOT_FOUND;
-        $serviceClientException = new ServiceClientException($status);
-        $this->serviceClient
-            ->expects(self::once())
-            ->method('SignalWorkflowExecution')
-            ->willThrowException($serviceClientException);
-
-        self::expectException(WorkflowNotFoundException::class);
-
-        $this->workflowStub->signal('signalName');
-    }
-
-    public function testSignalThrowsWorkflowServiceException(): void
-    {
-        $status = new \stdClass();
-        $status->details = 'status details';
-        $status->code = StatusCode::INTERNAL;
-        $serviceClientException = new ServiceClientException($status);
-        $this->serviceClient
-            ->expects(self::once())
-            ->method('SignalWorkflowExecution')
-            ->willThrowException($serviceClientException);
-
-        self::expectException(WorkflowServiceException::class);
-
-        $this->workflowStub->signal('signalName');
-    }
-
-    public function testEmptyHistoryContinuesWaitingForHistoryEvents(): void
-    {
-        $responseWithHistory = (new GetWorkflowExecutionHistoryResponse())
-            ->setHistory(
-                (new History())->setEvents(
-                    [
-                        (new HistoryEvent())
-                            ->setEventType(EventType::EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED)
-                            ->setWorkflowExecutionCompletedEventAttributes(
-                                (new WorkflowExecutionCompletedEventAttributes())->setResult(
-                                    (new Payloads())->setPayloads([(new Payload())->setData('hello')]),
-                                ),
-                            ),
-                    ],
-                ),
-            );
-
-        $this->serviceClient
-            ->expects(self::exactly(2))
-            ->method('GetWorkflowExecutionHistory')
-            ->willReturnOnConsecutiveCalls(
-                new GetWorkflowExecutionHistoryResponse(),
-                $responseWithHistory,
-            );
-
-        $result = $this->workflowStub->getResult();
-        $this->assertNull($result);
-    }
 
     protected function setUp(): void
     {
@@ -108,5 +46,66 @@ final class WorkflowStubTestCase extends TestCase
             (new PipelineProvider([]))->getPipeline(WorkflowClientCallsInterceptor::class),
         );
         $this->workflowStub->setExecution(new WorkflowExecution());
+    }
+
+    public function testSignalThrowsWorkflowNotFoundException(): void
+    {
+        $status = new \stdClass();
+        $status->details = 'status details';
+        $status->code = StatusCode::NOT_FOUND;
+        $serviceClientException = new ServiceClientException($status);
+        $this->serviceClient
+            ->expects(static::once())
+            ->method('SignalWorkflowExecution')
+            ->willThrowException($serviceClientException);
+
+        static::expectException(WorkflowNotFoundException::class);
+
+        $this->workflowStub->signal('signalName');
+    }
+
+    public function testSignalThrowsWorkflowServiceException(): void
+    {
+        $status = new \stdClass();
+        $status->details = 'status details';
+        $status->code = StatusCode::INTERNAL;
+        $serviceClientException = new ServiceClientException($status);
+        $this->serviceClient
+            ->expects(static::once())
+            ->method('SignalWorkflowExecution')
+            ->willThrowException($serviceClientException);
+
+        static::expectException(WorkflowServiceException::class);
+
+        $this->workflowStub->signal('signalName');
+    }
+
+    public function testEmptyHistoryContinuesWaitingForHistoryEvents(): void
+    {
+        $responseWithHistory = (new GetWorkflowExecutionHistoryResponse())
+            ->setHistory(
+                (new History)->setEvents(
+                    [
+                        (new HistoryEvent())
+                            ->setEventType(EventType::EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED)
+                            ->setWorkflowExecutionCompletedEventAttributes(
+                                (new WorkflowExecutionCompletedEventAttributes())->setResult(
+                                    (new Payloads())->setPayloads([(new Payload())->setData('hello')])
+                                )
+                            )
+                    ]
+                )
+            );
+
+        $this->serviceClient
+            ->expects(static::exactly(2))
+            ->method('GetWorkflowExecutionHistory')
+            ->willReturnOnConsecutiveCalls(
+                new GetWorkflowExecutionHistoryResponse(),
+                $responseWithHistory
+            );
+
+        $result = $this->workflowStub->getResult();
+        $this->assertNull($result);
     }
 }

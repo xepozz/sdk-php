@@ -38,7 +38,7 @@ final class RoadRunnerVersionCheckerTestCase extends AbstractUnit
 
         $checker = new RoadRunnerVersionChecker(
             checker: new VersionChecker(installedVersion: $installed, requiredVersion: $required),
-            logger: $logger,
+            logger: $logger
         );
         $checker->check();
     }
@@ -65,7 +65,7 @@ final class RoadRunnerVersionCheckerTestCase extends AbstractUnit
 
         $checker = new RoadRunnerVersionChecker(
             checker: new VersionChecker(installedVersion: $installed, requiredVersion: $required),
-            logger: $logger,
+            logger: $logger
         );
         $checker->check();
     }
@@ -92,7 +92,7 @@ final class RoadRunnerVersionCheckerTestCase extends AbstractUnit
 
         $checker = new RoadRunnerVersionChecker(
             checker: new VersionChecker(installedVersion: $installed, requiredVersion: $required),
-            logger: $logger,
+            logger: $logger
         );
         $checker->check();
     }

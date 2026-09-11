@@ -11,13 +11,18 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Functional\Client;
 
+use Carbon\CarbonInterval;
+use Temporal\Api\Workflowservice\V1\ListClosedWorkflowExecutionsRequest;
+use Temporal\Client\GRPC\Context;
+use Temporal\Exception\Client\TimeoutException;
+
 /**
  * @group client
  * @group functional
  */
 class ServiceClientTestCase extends AbstractClient
 {
-    public function testTimeoutException(): void
+    public function testTimeoutException()
     {
         $this->expectNotToPerformAssertions();
     }

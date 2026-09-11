@@ -18,6 +18,7 @@ use Symfony\Component\Filesystem\Filesystem;
 trait TranscriptTestSupport
 {
     protected string $directory;
+
     private Filesystem $filesystem;
 
     #[\Override]

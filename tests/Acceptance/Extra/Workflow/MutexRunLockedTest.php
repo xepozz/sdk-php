@@ -79,7 +79,7 @@ class TestWorkflow
         $trailed = false;
         yield Workflow::await(
             fn() => $this->exit,
-            Workflow::runLocked($this->mutex, static function () use (&$trailed): void {
+            Workflow::runLocked($this->mutex, static function () use (&$trailed) {
                 $trailed = true;
             }),
         );
@@ -110,7 +110,7 @@ class TestWorkflow
         // Permanently lock mutex
         Workflow::runLocked($this->mutex, function () {
             $this->unlocked = true;
-            yield Workflow::await(static fn() => false);
+            yield Workflow::await(fn() => false);
         });
 
         yield Workflow::await(fn() => $this->unblock);

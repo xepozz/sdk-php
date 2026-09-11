@@ -15,5 +15,6 @@ final class ParentDto
 {
     public function __construct(
         public ChildDto $child,
-    ) {}
+    ) {
+    }
 }

@@ -15,27 +15,25 @@ use Temporal\Workflow\SignalMethod;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/**
- * @WorkflowInterface
- */
+/** @WorkflowInterface */
 #[WorkflowInterface]
 class WorkflowWithSignals
 {
-    /**
-     * @WorkflowMethod
-     */
+    /** @WorkflowMethod */
     #[WorkflowMethod]
-    public function handler(): void {}
+    public function handler(): void
+    {
+    }
 
-    /**
-     * @SignalMethod
-     */
+    /** @SignalMethod */
     #[SignalMethod]
-    public function a(): void {}
+    public function a(): void
+    {
+    }
 
-    /**
-     * @SignalMethod
-     */
+    /** @SignalMethod */
     #[SignalMethod]
-    public function b(): void {}
+    public function b(): void
+    {
+    }
 }

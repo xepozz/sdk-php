@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 namespace Temporal\Tests\Acceptance\Harness\Update\Self;
-
 use PHPUnit\Framework\Attributes\Test;
 use Temporal\Activity;
 use Temporal\Activity\ActivityInterface;
@@ -47,7 +46,7 @@ class FeatureWorkflow
     }
 
     #[Workflow\UpdateMethod('my_update')]
-    public function myUpdate(): void
+    public function myUpdate()
     {
         $this->done = true;
     }

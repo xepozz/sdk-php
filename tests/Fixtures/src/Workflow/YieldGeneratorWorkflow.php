@@ -22,8 +22,7 @@ use function React\Promise\resolve;
 class YieldGeneratorWorkflow
 {
     #[WorkflowMethod(name: 'YieldGeneratorWorkflow')]
-    public function handler(): iterable
-    {
+    public function handler(): iterable {
         return yield $this->generate();
     }
 

@@ -40,6 +40,7 @@ final class ClientMock implements ClientInterface
 
     /**
      * @psalm-param SuccessResponseInterface|FailureResponseInterface $response
+     * @param ServerResponseInterface $response
      */
     public function dispatch(ServerResponseInterface $response): void
     {

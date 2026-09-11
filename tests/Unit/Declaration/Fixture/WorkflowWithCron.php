@@ -15,9 +15,7 @@ use Temporal\Common\CronSchedule;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/**
- * @WorkflowInterface
- */
+/** @WorkflowInterface  */
 #[WorkflowInterface]
 class WorkflowWithCron
 {
@@ -26,5 +24,7 @@ class WorkflowWithCron
      * @CronSchedule(interval="@daily")
      */
     #[WorkflowMethod, CronSchedule('@daily')]
-    public function handler(): void {}
+    public function handler(): void
+    {
+    }
 }

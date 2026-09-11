@@ -10,6 +10,7 @@ final class Uuid
 {
     public function __construct(
         public UuidInterface $uuid,
-        public ?UuidInterface $nullableUuid = null,
-    ) {}
+        public ?UuidInterface $nullableUuid = null
+    ) {
+    }
 }

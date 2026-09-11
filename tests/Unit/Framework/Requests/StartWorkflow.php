@@ -23,20 +23,20 @@ final class StartWorkflow extends ServerRequest
             ],
             'WorkflowType' => [
                 'Name' => $this->extractClassShortName($workflowType),
-            ],
+            ]
         ];
         parent::__construct(
             name: 'StartWorkflow',
             info: new TickInfo(new \DateTimeImmutable()),
             options: ['info' => $info],
-            payloads: EncodedValues::fromValues($args),
+            payloads: EncodedValues::fromValues($args)
         );
     }
 
     private function extractClassShortName(string $workflowType): string
     {
-        $path = \explode('\\', $workflowType);
+        $path = explode('\\', $workflowType);
 
-        return \array_pop($path);
+        return array_pop($path);
     }
 }

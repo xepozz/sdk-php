@@ -18,8 +18,8 @@ class JustLocalActivity
 {
     #[Activity\ActivityMethod]
     public function echo(
-        string $input,
+        string $input
     ): string {
-        return \strtoupper($input);
+        return strtoupper($input);
     }
 }

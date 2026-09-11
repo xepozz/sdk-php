@@ -14,15 +14,11 @@ namespace Temporal\Tests\Unit\Declaration\Fixture\Interfaces;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/**
- * @ActivityInterface
- */
+/** @ActivityInterface */
 #[ActivityInterface]
 interface SimpleActivityInterface
 {
-    /**
-     * @ActivityMethod(name="activityMethodFromInterface")
-     */
+    /** @ActivityMethod(name="activityMethodFromInterface") */
     #[ActivityMethod(name: 'activityMethodFromInterface')]
     public function activityMethod(): void;
 }

@@ -17,55 +17,6 @@ use Temporal\Workflow\WorkflowType;
 #[CoversClass(\Temporal\Client\Schedule\Action\StartWorkflowAction::class)]
 class StartWorkflowActionTestCase extends TestCase
 {
-    public static function provideInput(): iterable
-    {
-        yield 'array' => [['foo', 'bar'], ['foo', 'bar']];
-        yield 'encoded-vals' => [EncodedValues::fromValues(['foo', 'bar']), ['foo', 'bar']];
-        yield 'change-array' => [['foo', 'bar'], ['foo', 'bar'], ['baz', 'qux'], ['baz', 'qux']];
-        yield 'change-encoded-vals' => [
-            EncodedValues::fromValues(['foo', 'bar']),
-            ['foo', 'bar'],
-            ['baz', 'qux'],
-            ['baz', 'qux'],
-        ];
-    }
-
-    public static function provideTimeouts(): iterable
-    {
-        yield 'string' => ['PT15S', '0/0/0/0/0/15'];
-        yield 'int' => [15, '0/0/0/0/0/15'];
-        yield 'date-interval' => [new \DateInterval('PT15S'), '0/0/0/0/0/15'];
-        yield 'change-string' => ['PT15S', '0/0/0/0/0/15', 'PT20S', '0/0/0/0/0/20'];
-        yield 'change-int' => [15, '0/0/0/0/0/15', 20, '0/0/0/0/0/20'];
-        yield 'change-date-interval' => [
-            new \DateInterval('PT15S'),
-            '0/0/0/0/0/15',
-            new \DateInterval('PT20S'),
-            '0/0/0/0/0/20',
-        ];
-    }
-
-    public static function provideEncodedValues(): iterable
-    {
-        yield 'array' => [['foo' => 'bar'], ['foo' => 'bar']];
-        yield 'generator' => [(static fn() => yield from ['foo' => 'bar'])(), ['foo' => 'bar']];
-        yield 'encoded collection' => [EncodedCollection::fromValues(['foo' => 'bar']), ['foo' => 'bar']];
-        yield 'change array' => [['foo' => 'bar'], ['foo' => 'bar'], ['baz' => 'qux'], ['baz' => 'qux']];
-        yield 'change generator' => [
-            (static fn() => yield from ['foo' => 'bar'])(),
-            ['foo' => 'bar'],
-            (static fn() => yield from ['baz' => 'qux'])(),
-            ['baz' => 'qux'],
-        ];
-        yield 'change encoded collection' => [
-            EncodedCollection::fromValues(['foo' => 'bar']),
-            ['foo' => 'bar'],
-            EncodedCollection::fromValues(['baz' => 'qux']),
-            ['baz' => 'qux'],
-        ];
-        yield 'clear' => [[], [], ['foo' => 'bar'], ['foo' => 'bar']];
-    }
-
     public function testWithWorkflowTypeString(): void
     {
         $init = StartWorkflowAction::new('TestWorkflow');
@@ -132,6 +83,34 @@ class StartWorkflowActionTestCase extends TestCase
         $this->assertSame($initExpect, $init->input->getValues(), 'init value was not changed');
         $this->assertCount(\count($expect), $new->input);
         $this->assertSame($expect, $new->input->getValues());
+    }
+
+    public static function provideInput(): iterable
+    {
+        yield 'array' => [['foo', 'bar'], ['foo', 'bar']];
+        yield 'encoded-vals' => [EncodedValues::fromValues(['foo', 'bar']), ['foo', 'bar']];
+        yield 'change-array' => [['foo', 'bar'], ['foo', 'bar'], ['baz', 'qux'], ['baz', 'qux']];
+        yield 'change-encoded-vals' => [
+            EncodedValues::fromValues(['foo', 'bar']),
+            ['foo', 'bar'],
+            ['baz', 'qux'],
+            ['baz', 'qux'],
+        ];
+    }
+
+    public static function provideTimeouts(): iterable
+    {
+        yield 'string' => ['PT15S', '0/0/0/0/0/15'];
+        yield 'int' => [15, '0/0/0/0/0/15'];
+        yield 'date-interval' => [new \DateInterval('PT15S'), '0/0/0/0/0/15'];
+        yield 'change-string' => ['PT15S', '0/0/0/0/0/15', 'PT20S', '0/0/0/0/0/20'];
+        yield 'change-int' => [15, '0/0/0/0/0/15', 20, '0/0/0/0/0/20'];
+        yield 'change-date-interval' => [
+            new \DateInterval('PT15S'),
+            '0/0/0/0/0/15',
+            new \DateInterval('PT20S'),
+            '0/0/0/0/0/20',
+        ];
     }
 
     #[DataProvider('provideTimeouts')]
@@ -204,6 +183,27 @@ class StartWorkflowActionTestCase extends TestCase
         $this->assertNotSame($init->retryPolicy, $new->retryPolicy);
         $this->assertSame(0, $init->retryPolicy->maximumAttempts);
         $this->assertSame(10, $new->retryPolicy->maximumAttempts);
+    }
+
+    public static function provideEncodedValues(): iterable
+    {
+        yield 'array' => [['foo' => 'bar'], ['foo' => 'bar']];
+        yield 'generator' => [(static fn() => yield from ['foo' => 'bar'])(), ['foo' => 'bar']];
+        yield 'encoded collection' => [EncodedCollection::fromValues(['foo' => 'bar']), ['foo' => 'bar']];
+        yield 'change array' => [['foo' => 'bar'], ['foo' => 'bar'], ['baz' => 'qux'], ['baz' => 'qux']];
+        yield 'change generator' => [
+            (static fn() => yield from ['foo' => 'bar'])(),
+            ['foo' => 'bar'],
+            (static fn() => yield from ['baz' => 'qux'])(),
+            ['baz' => 'qux'],
+        ];
+        yield 'change encoded collection' => [
+            EncodedCollection::fromValues(['foo' => 'bar']),
+            ['foo' => 'bar'],
+            EncodedCollection::fromValues(['baz' => 'qux']),
+            ['baz' => 'qux'],
+        ];
+        yield 'clear' => [[], [], ['foo' => 'bar'], ['foo' => 'bar']];
     }
 
     #[DataProvider('provideEncodedValues')]

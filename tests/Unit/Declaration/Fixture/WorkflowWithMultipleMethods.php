@@ -14,21 +14,19 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/**
- * @WorkflowInterface
- */
+/** @WorkflowInterface */
 #[WorkflowInterface]
 class WorkflowWithMultipleMethods
 {
-    /**
-     * @WorkflowMethod
-     */
+    /** @WorkflowMethod */
     #[WorkflowMethod]
-    public function a(): void {}
+    public function a(): void
+    {
+    }
 
-    /**
-     * @WorkflowMethod
-     */
+    /** @WorkflowMethod */
     #[WorkflowMethod]
-    public function b(): void {}
+    public function b(): void
+    {
+    }
 }

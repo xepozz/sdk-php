@@ -87,7 +87,7 @@ final class OneOfTypeTestCase extends TestCase
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->expects($this->once())
             ->method('unmarshal')
-            ->willReturnCallback(static function (array $data, object $obj) {
+            ->willReturnCallback(function (array $data, object $obj) {
                 $obj->name = $data['name'];
                 return $obj;
             });
@@ -110,7 +110,7 @@ final class OneOfTypeTestCase extends TestCase
         $marshaller = $this->createMock(MarshallerInterface::class);
         $marshaller->expects($this->once())
             ->method('unmarshal')
-            ->willReturnCallback(static function (array $data, object $obj) {
+            ->willReturnCallback(function (array $data, object $obj) {
                 $obj->name = $data['name'];
                 return $obj;
             });

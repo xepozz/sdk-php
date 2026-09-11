@@ -14,17 +14,17 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/**
- * @ActivityInterface
- */
+/** @ActivityInterface */
 #[ActivityInterface]
 class ActivityNamesDuplication
 {
-    public function a(): void {}
+    public function a()
+    {
+    }
 
-    /**
-     * @ActivityMethod(name="a")
-     */
+    /** @ActivityMethod(name="a") */
     #[ActivityMethod(name: 'a')]
-    public function b(): void {}
+    public function b()
+    {
+    }
 }

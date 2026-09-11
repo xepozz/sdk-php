@@ -21,12 +21,12 @@ class ActivityStubWorkflow
 {
     #[WorkflowMethod(name: 'ActivityStubWorkflow')]
     public function handler(
-        string $input,
+        string $input
     ) {
         // typed stub
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5),
+            ActivityOptions::new()->withStartToCloseTimeout(5)
         );
 
         $result = [];

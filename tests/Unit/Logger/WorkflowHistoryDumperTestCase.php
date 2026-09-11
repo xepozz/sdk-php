@@ -47,6 +47,7 @@ final class WorkflowHistoryDumperTestCase extends TestCase
 {
     use TranscriptTestSupport;
 
+
     public function testWritesHistorySkippedMetaWhenArgsAreEmpty(): void
     {
         $writer = $this->newWriter('empty.log');

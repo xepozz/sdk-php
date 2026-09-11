@@ -19,11 +19,25 @@ use function React\Promise\resolve;
 final class AwaitPromiseSettlementTestCase extends AbstractUnit
 {
     private WorkerFactoryInterface $factory;
-
     /** @var WorkerMock|WorkerInterface */
     private $worker;
-
     private bool $flagBackup;
+
+    protected function setUp(): void
+    {
+        $this->flagBackup = FeatureFlags::$settleAwaitOnFirstSettledCondition;
+        $this->factory = WorkerFactoryMock::create();
+        $this->worker = $this->factory->newWorker();
+
+        parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        FeatureFlags::$settleAwaitOnFirstSettledCondition = $this->flagBackup;
+
+        parent::tearDown();
+    }
 
     public function testClosureFalseTimesOut(): void
     {
@@ -39,7 +53,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return $result === false ? 'TIMEOUT' : 'MET';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
@@ -61,7 +75,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return $result === true ? 'MET' : 'TIMEOUT';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
@@ -83,7 +97,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return $result === true ? 'MET' : 'TIMEOUT';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
@@ -109,7 +123,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return 'NO_THROW';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
@@ -135,7 +149,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return 'NO_THROW';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
@@ -188,28 +202,12 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return 'NO_THROW';
                 }
-            },
+            }
         );
 
         $this->worker->runWorkflow('AwaitPromiseWorkflow');
         $this->worker->assertWorkflowReturns('THREW');
         $this->factory->run($this->worker);
-    }
-
-    protected function setUp(): void
-    {
-        $this->flagBackup = FeatureFlags::$settleAwaitOnFirstSettledCondition;
-        $this->factory = WorkerFactoryMock::create();
-        $this->worker = $this->factory->newWorker();
-
-        parent::setUp();
-    }
-
-    protected function tearDown(): void
-    {
-        FeatureFlags::$settleAwaitOnFirstSettledCondition = $this->flagBackup;
-
-        parent::tearDown();
     }
 
     private function registerRejectingAwaitWithTimeoutWorkflow(): void
@@ -229,7 +227,7 @@ final class AwaitPromiseSettlementTestCase extends AbstractUnit
 
                     return 'RESULT:' . \var_export($result, true);
                 }
-            },
+            }
         );
     }
 }

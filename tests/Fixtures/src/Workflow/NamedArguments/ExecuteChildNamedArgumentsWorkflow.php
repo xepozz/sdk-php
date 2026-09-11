@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Temporal\Tests\Workflow\NamedArguments;
 
 use Temporal\Workflow;
@@ -22,7 +20,7 @@ class ExecuteChildNamedArgumentsWorkflow
             'SimpleNamedArgumentsWorkflow',
             [
                 'int' => $int,
-            ],
+            ]
         );
 
         $paramsInDifferentOrderRes = yield Workflow::executeChildWorkflow(
@@ -33,7 +31,7 @@ class ExecuteChildNamedArgumentsWorkflow
                 'bool' => $bool,
                 'nullableString' => $nullableString,
                 'array' => $array,
-            ],
+            ]
         );
 
         $missingParamsRes = yield Workflow::executeChildWorkflow(
@@ -41,7 +39,7 @@ class ExecuteChildNamedArgumentsWorkflow
             [
                 'int' => $int,
                 'nullableString' => $nullableString,
-            ],
+            ]
         );
 
         $missingParamAndDifferentOrderRes = yield Workflow::executeChildWorkflow(
@@ -49,7 +47,7 @@ class ExecuteChildNamedArgumentsWorkflow
             [
                 'nullableString' => $nullableString,
                 'int' => $int,
-            ],
+            ]
         );
 
         return [

@@ -64,7 +64,6 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
      * @var RepositoryInterface<WorkerInterface>
      */
     private RepositoryInterface $queues;
-
     private CodecInterface $codec;
     private ClientInterface $client;
     private ServerInterface $server;
@@ -85,6 +84,9 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
         return new static(DataConverter::createDefault());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function newWorker(
         string $taskQueue = self::DEFAULT_TASK_QUEUE,
         ?WorkerOptions $options = null,

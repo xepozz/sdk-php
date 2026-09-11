@@ -14,15 +14,13 @@ namespace Temporal\Tests\Unit\Declaration\Fixture;
 use Temporal\Activity\ActivityInterface;
 use Temporal\Activity\ActivityMethod;
 
-/**
- * @ActivityInterface
- */
+/** @ActivityInterface */
 #[ActivityInterface]
 class ActivityWithProtectedMethod
 {
-    /**
-     * @ActivityMethod
-     */
+    /** @ActivityMethod */
     #[ActivityMethod]
-    protected function invalidActivityProtectedMethod(): void {}
+    protected function invalidActivityProtectedMethod(): void
+    {
+    }
 }

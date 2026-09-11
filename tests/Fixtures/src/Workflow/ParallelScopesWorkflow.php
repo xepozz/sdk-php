@@ -25,19 +25,19 @@ class ParallelScopesWorkflow
     {
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5),
+            ActivityOptions::new()->withStartToCloseTimeout(5)
         );
 
-        $a = Workflow::async(static function () use ($simple, $input) {
+        $a = Workflow::async(function () use ($simple, $input) {
             return yield $simple->echo($input);
         });
 
-        $b = Workflow::async(static function () use ($simple, $input) {
+        $b = Workflow::async(function () use ($simple, $input) {
             return yield $simple->lower($input);
         });
 
         [$ra, $rb] = yield Promise::all([$a, $b]);
 
-        return \sprintf('%s|%s|%s', $ra, $input, $rb);
+        return sprintf('%s|%s|%s', $ra, $input, $rb);
     }
 }

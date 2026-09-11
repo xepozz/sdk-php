@@ -25,7 +25,7 @@ class VoidActivityStubWorkflow
         // typed stub
         $simple = Workflow::newActivityStub(
             SimpleActivity::class,
-            ActivityOptions::new()->withStartToCloseTimeout(5),
+            ActivityOptions::new()->withStartToCloseTimeout(5)
         );
 
         return yield $simple->empty();

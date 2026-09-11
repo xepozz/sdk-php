@@ -11,5 +11,7 @@ use Temporal\Activity\LocalActivityInterface;
 final class DummyLocalActivity
 {
     #[ActivityMethod(name: "DoNothing")]
-    public function doNothing(): void {}
+    public function doNothing(): void
+    {
+    }
 }

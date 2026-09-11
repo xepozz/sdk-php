@@ -13,7 +13,6 @@ final class CommandBatchMock
 {
     /** @var CommandInterface[] */
     public array $commands;
-
     public array $context;
 
     public function __construct(array $commands, array $context)

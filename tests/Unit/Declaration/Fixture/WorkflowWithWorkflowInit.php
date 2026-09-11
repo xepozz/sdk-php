@@ -15,9 +15,7 @@ use Temporal\Workflow\WorkflowInit;
 use Temporal\Workflow\WorkflowInterface;
 use Temporal\Workflow\WorkflowMethod;
 
-/**
- * @WorkflowInterface
- */
+/** @WorkflowInterface */
 #[WorkflowInterface]
 class WorkflowWithWorkflowInit
 {

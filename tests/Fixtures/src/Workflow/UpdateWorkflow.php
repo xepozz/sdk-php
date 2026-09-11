@@ -63,9 +63,9 @@ class UpdateWorkflow
             $promises[] = Workflow::sideEffect(
                 static fn(): string => \sprintf('Hello, %s!', ['Antony', 'Alexey', 'John'][\random_int(0, 2)]),
             )->then(
-                function (string $greeting): void {
+                function (string $greeting) {
                     $this->greetings[] = $greeting;
-                },
+                }
             );
         }
         yield Promise::all($promises);
@@ -106,7 +106,7 @@ class UpdateWorkflow
     #[Workflow\ReturnType('object')]
     public function returnAsObject(mixed $mixed): object
     {
-        return (object) (array) $mixed;
+        return (object)(array)$mixed;
     }
 
     #[Workflow\SignalMethod]

@@ -32,16 +32,16 @@ class SignalWorkflow
                 return $received;
             }
 
-            $message = \array_shift($this->greetings);
+            $message = array_shift($this->greetings);
             $received[] = $message;
         }
     }
 
     #[SignalMethod]
     public function addName(
-        string $name,
+        string $name
     ): void {
-        $this->greetings[] = \sprintf('Hello, %s!', $name);
+        $this->greetings[] = sprintf('Hello, %s!', $name);
     }
 
     #[SignalMethod]

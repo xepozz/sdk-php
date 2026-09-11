@@ -22,7 +22,7 @@ class ClientOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ClientOptions();
 
         $this->assertNotSame($dto, $dto->withNamespace(
-            Uuid::v4(),
+            Uuid::v4()
         ));
     }
 
@@ -31,16 +31,15 @@ class ClientOptionsTestCase extends AbstractDTOMarshalling
         $dto = new ClientOptions();
 
         $this->assertNotSame($dto, $dto->withIdentity(
-            Uuid::v4(),
+            Uuid::v4()
         ));
     }
-
     public function testQueryRejectionConditionChangesNotMutateState(): void
     {
         $dto = new ClientOptions();
 
         $this->assertNotSame($dto, $dto->withQueryRejectionCondition(
-            QueryRejectCondition::QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY,
+            QueryRejectCondition::QUERY_REJECT_CONDITION_NOT_COMPLETED_CLEANLY
         ));
     }
 }

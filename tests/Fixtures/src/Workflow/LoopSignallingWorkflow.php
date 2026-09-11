@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace Temporal\Tests\Workflow;
 
+use Temporal\Activity\ActivityOptions;
+use Temporal\Common\RetryOptions;
+use Temporal\Tests\Activity\SimpleActivity;
 use Temporal\Workflow;
 
 #[Workflow\WorkflowInterface]
@@ -19,7 +22,7 @@ class LoopSignallingWorkflow
     #[Workflow\WorkflowMethod]
     public function run(
         Workflow\WorkflowExecution $execution,
-        bool $truncateRunID = false,
+        bool $truncateRunID = false
     ) {
         if ($truncateRunID) {
             $execution = new Workflow\WorkflowExecution($execution->getID());
