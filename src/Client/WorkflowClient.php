@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Temporal\Client;
 
 use Doctrine\Common\Annotations\Reader;
+use Psr\Log\LoggerInterface;
 use JetBrains\PhpStorm\Deprecated;
 use Spiral\Attributes\AnnotationReader;
 use Spiral\Attributes\AttributeReader;
@@ -23,6 +24,7 @@ use Temporal\Api\Workflowservice\V1\GetWorkflowExecutionHistoryRequest;
 use Temporal\Api\Workflowservice\V1\ListWorkflowExecutionsRequest;
 use Temporal\Client\Common\ClientContextTrait;
 use Temporal\Client\Common\Paginator;
+use Temporal\Client\GRPC\BaseClient;
 use Temporal\Client\GRPC\ServiceClientInterface;
 use Temporal\Client\Update\LifecycleStage;
 use Temporal\Client\Update\UpdateHandle;
@@ -75,12 +77,17 @@ class WorkflowClient implements WorkflowClientInterface
     /** @var Pipeline<WorkflowClientCallsInterceptor, mixed> */
     private Pipeline $interceptorPipeline;
 
+    /**
+     * @param null|LoggerInterface $logger Logger for client-side warnings, e.g. the payload size
+     *        warning configured by {@see ClientOptions::withPayloadLimits()}.
+     */
     public function __construct(
         ServiceClientInterface $serviceClient,
         ?ClientOptions $options = null,
         ?DataConverterInterface $converter = null,
         ?PipelineProvider $interceptorProvider = null,
         ?PluginRegistry $pluginRegistry = null,
+        ?LoggerInterface $logger = null,
     ) {
         $this->pluginRegistry = $pluginRegistry ?? new PluginRegistry();
         $this->clientOptions = $options ?? new ClientOptions();
@@ -116,6 +123,11 @@ class WorkflowClient implements WorkflowClientInterface
         $this->interceptorPipeline = $provider->getPipeline(WorkflowClientCallsInterceptor::class);
         $this->reader = new WorkflowReader($this->createReader());
 
+        // Warn about oversized payloads when a logger is provided
+        if ($logger !== null && $this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
+            $serviceClient = $serviceClient->withPayloadLimits($this->clientOptions->payloadLimits, $logger);
+        }
+
         // Set Temporal-Namespace metadata
         $context = $serviceClient->getContext();
         $this->client = $serviceClient->withContext(
@@ -131,8 +143,9 @@ class WorkflowClient implements WorkflowClientInterface
         ?DataConverterInterface $converter = null,
         ?PipelineProvider $interceptorProvider = null,
         ?PluginRegistry $pluginRegistry = null,
+        ?LoggerInterface $logger = null,
     ): self {
-        return new self($serviceClient, $options, $converter, $interceptorProvider, $pluginRegistry);
+        return new self($serviceClient, $options, $converter, $interceptorProvider, $pluginRegistry, $logger);
     }
 
     /**
