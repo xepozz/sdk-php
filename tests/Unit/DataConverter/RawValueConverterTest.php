@@ -26,7 +26,11 @@ class RawValueConverterTest extends AbstractUnit
 {
     public function testRawPayloadEncoding(): void
     {
-        $innerPayload = new Payload(['data' => 1]);
+        // A raw value is passed through verbatim, metadata included.
+        $innerPayload = new Payload([
+            'data' => 1,
+            'metadata' => [EncodingKeys::METADATA_ENCODING_KEY => EncodingKeys::METADATA_ENCODING_RAW_VALUE],
+        ]);
         $message = new RawValue($innerPayload);
 
         $payload = DataConverter::createDefault()->toPayload($message);

@@ -35,6 +35,11 @@ $suite = (static function (array $argv): ?string {
     return null;
 })($GLOBALS['argv'] ?? []);
 
+if ($suite === null) {
+    // An isolated process has no suite name and no path argument; the parent already bootstrapped.
+    return;
+}
+
 $suite = \substr($suite, 0, \strpos($suite, '-') ?: \strlen($suite));
 
 # Include related bootstrap
