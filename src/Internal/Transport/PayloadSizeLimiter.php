@@ -16,7 +16,6 @@ use Temporal\Client\WorkflowClientInterface;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\Exception\PayloadSizeExceededException;
 use Temporal\Internal\Support\CommandPayloads;
-use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\CommandInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
@@ -29,7 +28,8 @@ use Temporal\Worker\Transport\Command\RequestInterface;
  * for.
  *
  * Responses to Queries and Updates are left to the server: the Go SDK turns an oversized Query
- * result into a failed Query rather than failing the task, which a Worker cannot do from here.
+ * result into a failed Query rather than failing the task, and failing the task instead would be
+ * worse than what the server does with it.
  *
  * Only the payloads a Workflow produces are measured. A memo and the Search Attributes travel as
  * raw values and are converted by RoadRunner, so the size measured here is an estimate: it is
@@ -50,7 +50,6 @@ final class PayloadSizeLimiter
     public function __construct(
         private readonly int $payloadSize,
         private readonly DataConverterInterface $converter,
-        private readonly EnvironmentInterface $env,
     ) {}
 
     /**
@@ -62,7 +61,6 @@ final class PayloadSizeLimiter
     public static function fromClient(
         WorkflowClientInterface $client,
         DataConverterInterface $converter,
-        EnvironmentInterface $env,
     ): ?self {
         try {
             $serviceClient = $client->getServiceClient();
@@ -81,22 +79,23 @@ final class PayloadSizeLimiter
 
         $payloadSize = (int) $limits?->getBlobSizeLimitError();
 
-        return $payloadSize > 0 ? new self($payloadSize, $converter, $env) : null;
+        return $payloadSize > 0 ? new self($payloadSize, $converter) : null;
     }
 
     /**
      * @param iterable<CommandInterface> $commands
+     * @param bool $replaying Whether any part of the batch was replayed: a replayed command is
+     *        matched against the history instead of being sent, so its size fails nothing.
      * @return list<CommandInterface> The same commands: the caller sends them on.
      *
      * @throws PayloadSizeExceededException
      */
-    public function enforce(iterable $commands): array
+    public function enforce(iterable $commands, bool $replaying = false): array
     {
         // The queue of a Worker drains as it is read, so nothing may be measured before it is kept
         $commands = \is_array($commands) ? \array_values($commands) : \iterator_to_array($commands, false);
 
-        // A replayed command is not sent to the server, so its size cannot fail anything
-        if ($this->env->isReplaying()) {
+        if ($replaying || $this->payloadSize <= 0) {
             return $commands;
         }
 

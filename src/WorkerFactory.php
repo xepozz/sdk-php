@@ -366,7 +366,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
     {
         return $this->workflowClient === null
             ? null
-            : PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter, $this->env);
+            : PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter);
     }
 
     private function boot(ServiceCredentials $credentials): void
@@ -400,8 +400,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $commands = $this->codec->decode($messages, $headers);
 
 
+        $replaying = false;
+
         foreach ($commands as $command) {
             $this->env->update($command->getTickInfo());
+            $replaying = $replaying || $command->getTickInfo()->isReplaying;
 
             if ($command instanceof ServerResponseInterface) {
                 $this->client->dispatch($command);
@@ -413,7 +416,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
 
         $this->tick();
 
-        return $this->codec->encode($this->limitPayloads($this->responses, $headers));
+        return $this->codec->encode($this->limitPayloads($this->responses, $headers, $replaying));
     }
 
     /**
@@ -425,7 +428,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
      *
      * @throws PayloadSizeExceededException
      */
-    private function limitPayloads(iterable $commands, array $headers): iterable
+    private function limitPayloads(iterable $commands, array $headers, bool $replaying): iterable
     {
         if ($this->payloadSizeLimiter === null) {
             return $commands;
@@ -438,7 +441,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         // handshake, never reaches the server. A Worker may also leave the enforcement to RoadRunner.
         return $worker === null || $worker->getOptions()->disablePayloadErrorLimit
             ? $commands
-            : $this->payloadSizeLimiter->enforce($commands);
+            : $this->payloadSizeLimiter->enforce($commands, $replaying);
     }
 
     private function onRequest(ServerRequestInterface $request, array $headers): PromiseInterface

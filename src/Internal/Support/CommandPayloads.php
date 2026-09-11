@@ -19,9 +19,7 @@ use Temporal\Internal\Transport\Request\UpsertMemo;
 use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
 use Temporal\Internal\Transport\Request\UpsertTypedSearchAttributes;
 use Temporal\Worker\Transport\Command\CommandInterface;
-use Temporal\Worker\Transport\Command\Client\UpdateResponse;
 use Temporal\Worker\Transport\Command\RequestInterface;
-use Temporal\Worker\Transport\Command\SuccessResponseInterface;
 
 /**
  * Sizes the server measures in a command a Worker sends.
@@ -79,13 +77,8 @@ final class CommandPayloads
             }, $converter);
         }
 
-        $values = match (true) {
-            $command instanceof RequestInterface,
-            $command instanceof SuccessResponseInterface => $command->getPayloads(),
-            $command instanceof UpdateResponse => $command->getPayloads(),
-            default => null,
-        };
-        $values === null || !$withPayloads or $payloads += self::valuesSize($values, $converter);
+        $command instanceof RequestInterface && $withPayloads
+            and $payloads += self::valuesSize($command->getPayloads(), $converter);
 
         return ['payloads' => $payloads, 'memo' => $memo];
     }

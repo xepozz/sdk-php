@@ -29,9 +29,7 @@ use Temporal\Internal\Transport\PayloadSizeLimiter;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
 use Temporal\Internal\Transport\Request\UpsertMemo;
-use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Transport\Command\Client\SuccessClientResponse;
-use Temporal\Worker\Transport\Command\Server\TickInfo;
 
 final class PayloadSizeLimiterTestCase extends TestCase
 {
@@ -48,6 +46,15 @@ final class PayloadSizeLimiterTestCase extends TestCase
             self::assertSame(1024, $e->limit);
             self::assertGreaterThan(2000, $e->size);
         }
+    }
+
+    public function testTheReportedFailureCarriesNoStackTrace(): void
+    {
+        // A Worker reports a failure as a string and it lands in the Workflow history
+        $failure = new PayloadSizeExceededException('payloads', 2000, 1024);
+
+        self::assertSame($failure->getMessage(), (string) $failure);
+        self::assertStringNotContainsString('Stack trace', (string) $failure);
     }
 
     public function testEveryCommandOfTheBatchIsMeasured(): void
@@ -117,9 +124,16 @@ final class PayloadSizeLimiterTestCase extends TestCase
     public function testReplayedCommandsAreNotMeasured(): void
     {
         // A replayed command is matched against the history, it is not sent anywhere
-        $limiter = $this->limiter(payloadSize: 1024, replaying: true);
+        $commands = [$this->activity(2000)];
 
-        self::assertCount(1, $limiter->enforce([$this->activity(2000)]));
+        self::assertSame($commands, $this->limiter(payloadSize: 1024)->enforce($commands, replaying: true));
+    }
+
+    public function testWithoutALimitNothingIsMeasured(): void
+    {
+        $commands = [$this->activity(2000)];
+
+        self::assertSame($commands, $this->limiter(payloadSize: 0)->enforce($commands));
     }
 
     public function testAMemoIsLeftToTheServer(): void
@@ -151,11 +165,7 @@ final class PayloadSizeLimiterTestCase extends TestCase
 
     public function testLimitsComeFromTheNamespace(): void
     {
-        $limiter = PayloadSizeLimiter::fromClient(
-            $this->client(2048),
-            DataConverter::createDefault(),
-            new Environment(),
-        );
+        $limiter = PayloadSizeLimiter::fromClient($this->client(2048), DataConverter::createDefault());
 
         self::assertNotNull($limiter);
 
@@ -174,15 +184,18 @@ final class PayloadSizeLimiterTestCase extends TestCase
             $seen = $ctx->getDeadline();
         });
 
-        PayloadSizeLimiter::fromClient($client, DataConverter::createDefault(), new Environment());
+        $before = new \DateTimeImmutable();
+        PayloadSizeLimiter::fromClient($client, DataConverter::createDefault());
 
         self::assertNotNull($seen, 'A Worker must not hang on a server that does not answer.');
+        // Ten seconds, the default RPC timeout of the Go SDK
+        self::assertEqualsWithDelta(10, $seen->getTimestamp() - $before->getTimestamp(), 1);
     }
 
     public function testNamespaceWithoutLimitsIsNotEnforced(): void
     {
         self::assertNull(
-            PayloadSizeLimiter::fromClient($this->client(0), DataConverter::createDefault(), new Environment()),
+            PayloadSizeLimiter::fromClient($this->client(0), DataConverter::createDefault()),
         );
     }
 
@@ -197,17 +210,14 @@ final class PayloadSizeLimiterTestCase extends TestCase
         $client->method('getServiceClient')->willReturn($serviceClient);
 
         self::assertNull(
-            PayloadSizeLimiter::fromClient($client, DataConverter::createDefault(), new Environment()),
+            PayloadSizeLimiter::fromClient($client, DataConverter::createDefault()),
             'A Worker that cannot ask sends what it produces, as it did before the limits existed.',
         );
     }
 
-    private function limiter(int $payloadSize, bool $replaying = false): PayloadSizeLimiter
+    private function limiter(int $payloadSize): PayloadSizeLimiter
     {
-        $env = new Environment();
-        $replaying and $env->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
-
-        return new PayloadSizeLimiter($payloadSize, DataConverter::createDefault(), $env);
+        return new PayloadSizeLimiter($payloadSize, DataConverter::createDefault());
     }
 
     private function client(int $payloadSize, ?\Closure $onCall = null): WorkflowClientInterface

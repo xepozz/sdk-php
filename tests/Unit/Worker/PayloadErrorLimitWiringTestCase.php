@@ -20,7 +20,6 @@ use Temporal\Interceptor\Header;
 use Temporal\Internal\Queue\ArrayQueue;
 use Temporal\Internal\Transport\PayloadSizeLimiter;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
-use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Transport\RPCConnectionInterface;
 use Temporal\Worker\WorkerOptions;
 use Temporal\WorkerFactory;
@@ -63,6 +62,11 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
         self::assertCount(1, $this->limit($factory, ['taskQueue' => 'default']));
     }
 
+    public function testAReplayedBatchIsNotMeasured(): void
+    {
+        self::assertCount(1, $this->limit($this->factory(), ['taskQueue' => 'default'], replaying: true));
+    }
+
     public function testTheResponsesOfABatchGoThroughTheLimit(): void
     {
         // `dispatch()` is private and needs an encoded batch to be called for real, so the one
@@ -70,7 +74,7 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
         $source = (string) \file_get_contents((string) (new \ReflectionClass(WorkerFactory::class))->getFileName());
 
         self::assertStringContainsString(
-            'encode($this->limitPayloads($this->responses, $headers))',
+            'encode($this->limitPayloads($this->responses, $headers, $replaying))',
             $source,
         );
     }
@@ -79,7 +83,7 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
      * @param array<string, mixed> $headers
      * @return iterable<mixed>
      */
-    private function limit(WorkerFactory $factory, array $headers): iterable
+    private function limit(WorkerFactory $factory, array $headers, bool $replaying = false): iterable
     {
         $queue = new ArrayQueue();
         $queue->push(new ExecuteActivity(
@@ -91,7 +95,7 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
 
         $method = new \ReflectionMethod(WorkerFactory::class, 'limitPayloads');
 
-        return $method->invoke($factory, $queue, $headers);
+        return $method->invoke($factory, $queue, $headers, $replaying);
     }
 
     private function factory(?WorkerOptions $options = null, bool $withLimiter = true): WorkerFactory
@@ -111,7 +115,7 @@ final class PayloadErrorLimitWiringTestCase extends TestCase
         (new \ReflectionProperty(WorkerFactory::class, 'payloadSizeLimiter'))->setValue(
             $factory,
             $withLimiter
-                ? new PayloadSizeLimiter(1024, DataConverter::createDefault(), new Environment())
+                ? new PayloadSizeLimiter(1024, DataConverter::createDefault())
                 : null,
         );
 

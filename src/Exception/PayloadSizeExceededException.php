@@ -34,7 +34,6 @@ final class PayloadSizeExceededException extends TemporalException
         public readonly int $size,
         public readonly int $limit,
     ) {
-        // The message is all a Worker can report: RoadRunner sends it on as a string
         parent::__construct(\sprintf(
             '[%s] Attempted to upload %s with size that exceeded the error limit. Size: %d, limit: %d.',
             self::MESSAGE_CODE,
@@ -42,5 +41,14 @@ final class PayloadSizeExceededException extends TemporalException
             $size,
             $limit,
         ));
+    }
+
+    /**
+     * A Worker reports a failure as a string, and it ends up in the history of the Workflow:
+     * the message alone belongs there, not the file and the stack of the SDK.
+     */
+    public function __toString(): string
+    {
+        return $this->getMessage();
     }
 }

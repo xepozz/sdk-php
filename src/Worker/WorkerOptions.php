@@ -286,8 +286,13 @@ class WorkerOptions
      * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
      * and the server rejects the oversized payload instead.
      *
-     * The limits are the ones the namespace reports. They are enforced by the SDK for the
-     * commands a Workflow produces, and by RoadRunner for everything it sends on its own.
+     * The limits are the ones the namespace reports, so the SDK enforces them only when a
+     * {@see \Temporal\Client\WorkflowClient} is given to the Worker factory to ask with, and only
+     * for the payloads of the commands a Workflow produces. Everything else, a memo and the
+     * Search Attributes among it, is converted and sent by RoadRunner, which enforces its own.
+     *
+     * This option turns the check off in both: it is also sent to RoadRunner, where it has no
+     * effect on a build that does not support it yet.
      *
      * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
      *
