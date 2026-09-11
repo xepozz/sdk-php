@@ -36,6 +36,7 @@ use Temporal\Api\Workflowservice\V1\TerminateWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Internal\Support\MessageSize;
 
 /**
  * Warns when an outgoing gRPC request carries payloads larger than the configured limits.
@@ -89,8 +90,7 @@ final class PayloadSizeChecker
      */
     private static function sizeOf(?Message $message): int
     {
-        // `byteSize()` is not available when the protobuf extension is used
-        return $message === null ? 0 : \strlen($message->serializeToString());
+        return $message === null ? 0 : MessageSize::of($message);
     }
 
     private function inspect(string $method, object $request): void

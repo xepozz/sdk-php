@@ -54,6 +54,7 @@ use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Client\PayloadSizeChecker;
+use Temporal\Internal\Support\MessageSize;
 use Temporal\Tests\Unit\Client\Stub\LoggerSpy;
 
 final class PayloadSizeCheckerTestCase extends TestCase
@@ -354,20 +355,48 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(20, $this->logger->records);
     }
 
-    public function testTheCheckersUseNoProtobufApiMissingFromTheExtension(): void
+    public function testTheCheckersWalkNoProtobufDescriptors(): void
     {
-        // The pure PHP implementation and the `protobuf` extension do not share these APIs,
-        // and CI runs the suite with only one of them at a time
+        // The descriptor API differs between the pure PHP implementation and the `protobuf`
+        // extension, and CI runs the suite with only one of them at a time
         $sources = [
             (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Client/PayloadSizeChecker.php'),
             (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Workflow/PayloadSizeWarner.php'),
         ];
 
         foreach ($sources as $source) {
-            self::assertDoesNotMatchRegularExpression('/[>:]byteSize\(/', $source);
             self::assertStringNotContainsString('DescriptorPool', $source);
             self::assertDoesNotMatchRegularExpression('/[>:]getDescriptor(ForEntity)?\(/', $source);
         }
+    }
+
+    /**
+     * @return iterable<string, array{\Closure(): \Google\Protobuf\Internal\Message}>
+     */
+    public static function measuredMessages(): iterable
+    {
+        yield 'empty payloads' => [static fn() => new Payloads()];
+        yield 'one small payload' => [static fn() => self::payloads(1)];
+        yield 'one large payload' => [static fn() => self::payloads(200_000)];
+        yield 'several payloads' => [static fn() => new Payloads([
+            'payloads' => [self::payload(10), self::payload(70_000), self::payload(0)],
+        ])];
+        yield 'empty memo' => [static fn() => new Memo()];
+        yield 'memo' => [static fn() => self::memo(5000)];
+        yield 'failure' => [static fn() => self::failure(2000)->setCause(self::failure(3000))];
+    }
+
+    /**
+     * @param \Closure(): \Google\Protobuf\Internal\Message $message
+     */
+    #[DataProvider('measuredMessages')]
+    public function testTheMeasuredSizeIsTheWireSize(\Closure $message): void
+    {
+        // The size is counted without producing the bytes where the protobuf implementation
+        // allows it, and that shortcut must agree with the bytes to the last one
+        $message = $message();
+
+        self::assertSame(\strlen($message->serializeToString()), MessageSize::of($message));
     }
 
     public function testBothCheckersWordTheWarningTheSameWay(): void

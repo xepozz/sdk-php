@@ -16,6 +16,7 @@ use Temporal\Api\Common\V1\Memo;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\DataConverter\ValuesInterface;
+use Temporal\Internal\Support\MessageSize;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
 use Temporal\Internal\Transport\Request\UpsertMemo;
 use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
@@ -27,8 +28,9 @@ use Temporal\Worker\Transport\Command\RequestInterface;
  * Warns when a command produced by a Workflow carries payloads larger than the configured limit.
  *
  * The payloads are measured the same way the server measures them, so the check costs one extra
- * conversion per command that carries payloads. Replayed commands are skipped entirely: they are
- * not sent to the server, so there is nothing to warn about.
+ * conversion per command that carries payloads; measuring the result of that conversion is free.
+ * Replayed commands are skipped entirely: they are not sent to the server, so there is nothing
+ * to warn about.
  *
  * @internal
  */
@@ -150,8 +152,7 @@ final class PayloadSizeWarner
         }
 
         $values->setDataConverter($this->converter);
-        // `byteSize()` is not available when the protobuf extension is used
-        $this->warn($command, 'payloads', \strlen($values->toPayloads()->serializeToString()), $limit);
+        $this->warn($command, 'payloads', MessageSize::of($values->toPayloads()), $limit);
     }
 
     /**
@@ -172,7 +173,7 @@ final class PayloadSizeWarner
 
         $memo = (new Memo())->setFields($payloads);
 
-        $this->warn($command, 'memo', \strlen($memo->serializeToString()), $limit);
+        $this->warn($command, 'memo', MessageSize::of($memo), $limit);
     }
 
     /**
