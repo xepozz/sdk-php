@@ -60,7 +60,7 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame([], $this->records, 'Replayed commands must not warn again.');
     }
 
-    public function testWarningIsRepeatedInReplayWhenLoggingInReplayIsEnabled(): void
+    public function testReplayIsSkippedEvenWithLoggingInReplayEnabled(): void
     {
         $this->runWorkflowWithArgument(
             \str_repeat('x', 2000),
@@ -68,9 +68,8 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
             enableLoggingInReplay: true,
         );
 
-        // Known difference from the Go/TS SDKs: there the check runs when the request is actually
-        // sent, so a replay never repeats it, while here it is bound to the Workflow logger.
-        self::assertCount(1, $this->records);
+        // A replayed command is never sent, so it is not reported regardless of the logger settings
+        self::assertSame([], $this->records);
     }
 
     public function testWarningCanBeDisabled(): void

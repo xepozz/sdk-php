@@ -865,6 +865,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
             : $this->payloadSizeWarner ??= new PayloadSizeWarner(
                 $limits,
                 $this->services->dataConverter,
+                $this->services->env,
                 $this->services->logger,
             );
     }

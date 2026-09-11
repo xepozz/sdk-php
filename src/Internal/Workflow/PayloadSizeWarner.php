@@ -14,13 +14,15 @@ namespace Temporal\Internal\Workflow;
 use Psr\Log\LoggerInterface;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
+use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
 /**
  * Warns when a command produced by a Workflow carries payloads larger than the configured limit.
  *
  * The payloads are measured the same way the server measures them, and the conversion result is
- * reused when the command is encoded, so the check does not serialize the values twice.
+ * reused when the command is encoded, so the check does not serialize the values twice. Replayed
+ * commands are skipped entirely: they are not sent to the server, so there is nothing to warn about.
  *
  * @internal
  */
@@ -34,13 +36,16 @@ final class PayloadSizeWarner
     public function __construct(
         private readonly PayloadLimitOptions $limits,
         private readonly DataConverterInterface $converter,
+        private readonly EnvironmentInterface $env,
         private readonly LoggerInterface $logger,
     ) {}
 
     public function check(RequestInterface $request): void
     {
         $limit = $this->limits->payloadSizeWarning;
-        if ($limit === null) {
+        // A replayed command is not sent anywhere, so it is never measured nor reported,
+        // the same way the other SDKs check the payloads only when the request is sent.
+        if ($limit === null || $this->env->isReplaying()) {
             return;
         }
 
