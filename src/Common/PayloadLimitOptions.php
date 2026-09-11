@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace Temporal\Client;
+namespace Temporal\Common;
 
 /**
  * Payload size limits at which the SDK logs a warning before sending a request to the server.

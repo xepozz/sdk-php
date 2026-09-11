@@ -134,6 +134,39 @@ final class EncodedValuesTestCase extends TestCase
         $ev->getValue(1);
     }
 
+    #[Test]
+    public function payloadsAreConvertedOnce(): void
+    {
+        $ev = EncodedValues::fromValues(['foo'], DataConverter::createDefault());
+
+        $payloads = $ev->toPayloads();
+
+        self::assertSame($payloads, $ev->toPayloads());
+    }
+
+    #[Test]
+    public function conversionCacheIsResetOnConverterChange(): void
+    {
+        $ev = EncodedValues::fromValues(['foo'], DataConverter::createDefault());
+
+        $payloads = $ev->toPayloads();
+        $ev->setDataConverter(DataConverter::createDefault());
+
+        self::assertNotSame($payloads, $ev->toPayloads());
+    }
+
+    #[Test]
+    public function conversionCacheSurvivesTheSameConverter(): void
+    {
+        $converter = DataConverter::createDefault();
+        $ev = EncodedValues::fromValues(['foo'], $converter);
+
+        $payloads = $ev->toPayloads();
+        $ev->setDataConverter($converter);
+
+        self::assertSame($payloads, $ev->toPayloads());
+    }
+
     private static function getReturnType(\Closure $closure): \ReflectionType
     {
         return (new \ReflectionFunction($closure))->getReturnType();

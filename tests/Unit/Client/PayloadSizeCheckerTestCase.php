@@ -22,7 +22,7 @@ use Temporal\Api\Failure\V1\Failure;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedRequest;
 use Temporal\Api\Workflowservice\V1\SignalWithStartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
-use Temporal\Client\PayloadLimitOptions;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Client\PayloadSizeChecker;
 
 final class PayloadSizeCheckerTestCase extends TestCase

@@ -22,7 +22,7 @@ use Temporal\Exception\Client\CanceledException;
 use Temporal\Exception\Client\ServiceClientException;
 use Temporal\Exception\Client\TimeoutException;
 use Psr\Log\LoggerInterface;
-use Temporal\Client\PayloadLimitOptions;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Interceptor\GrpcClientInterceptor;
 use Temporal\Internal\Client\PayloadSizeChecker;
 use Temporal\Internal\Interceptor\Pipeline;

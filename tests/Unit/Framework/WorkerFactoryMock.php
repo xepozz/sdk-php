@@ -36,6 +36,7 @@ use Temporal\Internal\Workflow\Logger;
 use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Common\Logger\StderrLogger;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Worker\LoopInterface;
 use Temporal\Worker\ServiceCredentials;
 use Temporal\Worker\Transport\Codec\CodecInterface;
@@ -93,6 +94,7 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
         ?ExceptionInterceptorInterface $exceptionInterceptor = null,
         ?PipelineProvider $interceptorProvider = null,
         ?LoggerInterface $logger = null,
+        ?PayloadLimitOptions $payloadLimits = new PayloadLimitOptions(),
     ): WorkerInterface {
         $options ??= WorkerOptions::new();
         $worker = new WorkerMock(
@@ -107,6 +109,7 @@ class WorkerFactoryMock implements WorkerFactoryInterface, LoopInterface
                     $options->enableLoggingInReplay,
                     $taskQueue,
                 ),
+                $payloadLimits,
             ),
         );
         $this->queues->add($worker);

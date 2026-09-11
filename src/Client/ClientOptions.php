@@ -14,6 +14,7 @@ namespace Temporal\Client;
 use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Pure;
 use Temporal\Api\Enums\V1\QueryRejectCondition;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Assert;
 
 /**

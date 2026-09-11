@@ -110,6 +110,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     /** @var Pipeline<WorkflowOutboundCallsInterceptor, PromiseInterface> */
     private Pipeline $callsInterceptor;
 
+    private ?PayloadSizeWarner $payloadSizeWarner = null;
     private readonly QueryDispatcher $queryDispatcher;
     private readonly SignalDispatcher $signalDispatcher;
     private readonly UpdateDispatcher $updateDispatcher;
@@ -494,6 +495,9 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         $this->readonly and throw new \RuntimeException('Workflow is not initialized.');
         $this->recordTrace();
 
+        // Warn about oversized payloads before the command is sent
+        $this->payloadSizeWarner()?->check($request);
+
         // Intercept workflow outbound calls
         return $this->requestInterceptor->with(
             function (RequestInterface $request) use ($waitResponse): PromiseInterface {
@@ -847,5 +851,21 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
     protected function recordTrace(): void
     {
         $this->readonly or $this->trace = \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS);
+    }
+
+    /**
+     * NULL when the payload size warning is disabled.
+     */
+    private function payloadSizeWarner(): ?PayloadSizeWarner
+    {
+        $limits = $this->services->payloadLimits;
+
+        return $limits === null
+            ? null
+            : $this->payloadSizeWarner ??= new PayloadSizeWarner(
+                $limits,
+                $this->services->dataConverter,
+                $this->services->logger,
+            );
     }
 }

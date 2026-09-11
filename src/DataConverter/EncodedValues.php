@@ -43,6 +43,11 @@ class EncodedValues implements ValuesInterface
     private ?DataConverterInterface $converter = null;
 
     /**
+     * Result of the last {@see self::toPayloads()} call, reset when the converter changes.
+     */
+    private ?Payloads $convertedPayloads = null;
+
+    /**
      * Can not be constructed directly.
      */
     private function __construct() {}
@@ -117,7 +122,7 @@ class EncodedValues implements ValuesInterface
 
     public function toPayloads(): Payloads
     {
-        return new Payloads(['payloads' => $this->toProtoCollection()]);
+        return $this->convertedPayloads ??= new Payloads(['payloads' => $this->toProtoCollection()]);
     }
 
     public function getValue(int|string $index, $type = null): mixed
@@ -162,6 +167,10 @@ class EncodedValues implements ValuesInterface
 
     public function setDataConverter(DataConverterInterface $converter): void
     {
+        if ($this->converter !== $converter) {
+            $this->convertedPayloads = null;
+        }
+
         $this->converter = $converter;
     }
 

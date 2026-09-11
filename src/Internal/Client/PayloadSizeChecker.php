@@ -18,7 +18,7 @@ use Google\Protobuf\Internal\MapField;
 use Google\Protobuf\Internal\Message;
 use Google\Protobuf\Internal\RepeatedField;
 use Psr\Log\LoggerInterface;
-use Temporal\Client\PayloadLimitOptions;
+use Temporal\Common\PayloadLimitOptions;
 
 /**
  * Warns when an outgoing gRPC request carries payloads larger than the configured limits.

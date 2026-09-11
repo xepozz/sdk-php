@@ -21,7 +21,7 @@ use Temporal\Client\ClientOptions;
 use Temporal\Client\GRPC\Connection\ConnectionState;
 use Temporal\Client\GRPC\ContextInterface;
 use Temporal\Client\GRPC\ServiceClient;
-use Temporal\Client\PayloadLimitOptions;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Client\WorkflowClient;
 use Temporal\Interceptor\GrpcClientInterceptor;
 use Temporal\Internal\Interceptor\Pipeline;

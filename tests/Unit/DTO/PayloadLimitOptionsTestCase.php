@@ -13,7 +13,7 @@ namespace Temporal\Tests\Unit\DTO;
 
 use PHPUnit\Framework\TestCase;
 use Temporal\Client\ClientOptions;
-use Temporal\Client\PayloadLimitOptions;
+use Temporal\Common\PayloadLimitOptions;
 
 final class PayloadLimitOptionsTestCase extends TestCase
 {

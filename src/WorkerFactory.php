@@ -52,6 +52,7 @@ use Temporal\Internal\Workflow\Logger;
 use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Common\Logger\StderrLogger;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Worker\LoopInterface;
 use Temporal\Worker\ServiceCredentials;
 use Temporal\Worker\Transport\Codec\CodecInterface;
@@ -162,12 +163,17 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         );
     }
 
+    /**
+     * @param null|PayloadLimitOptions $payloadLimits Payload size limits at which the Workflow logs
+     *        a warning. Defaults to {@see PayloadLimitOptions::new()}; NULL disables the warnings.
+     */
     public function newWorker(
         string $taskQueue = self::DEFAULT_TASK_QUEUE,
         ?WorkerOptions $options = null,
         ?ExceptionInterceptorInterface $exceptionInterceptor = null,
         ?PipelineProvider $interceptorProvider = null,
         ?LoggerInterface $logger = null,
+        ?PayloadLimitOptions $payloadLimits = new PayloadLimitOptions(),
     ): WorkerInterface {
         $options ??= WorkerOptions::new();
 
@@ -202,6 +208,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
                     $options->enableLoggingInReplay,
                     $taskQueue,
                 ),
+                $payloadLimits,
             ),
             $this->rpc,
         );
