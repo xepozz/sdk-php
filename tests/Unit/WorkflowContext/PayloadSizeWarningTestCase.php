@@ -21,7 +21,10 @@ use Temporal\DataConverter\EncodedValues;
 use Temporal\Exception\DataConverterException;
 use Temporal\Interceptor\Header;
 use Temporal\Internal\Transport\Request\ExecuteActivity;
+use Temporal\Internal\Transport\Request\ExecuteChildWorkflow;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
+use Temporal\Internal\Transport\Request\UpsertMemo;
+use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
 use Temporal\Internal\Workflow\PayloadSizeWarner;
 use Temporal\Tests\Activity\SimpleActivity;
 use Temporal\Tests\Unit\AbstractUnit;
@@ -139,6 +142,100 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame('ExecuteActivity', $this->records[0][1]['command']);
     }
 
+    public function testUpsertedMemoIsMeasuredAsAPayloadMap(): void
+    {
+        $this->warner()->check(new UpsertMemo(['key' => \str_repeat('x', 2000)]));
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('payloads', $this->records[0][0]);
+        self::assertSame('UpsertMemo', $this->records[0][1]['command']);
+        // The key length plus the data of the payload, the way the server counts it
+        self::assertSame(\strlen('key') + 2002, $this->records[0][1]['size']);
+    }
+
+    public function testUpsertedSearchAttributesAreMeasuredAsAPayloadMap(): void
+    {
+        $this->warner()->check(new UpsertSearchAttributes(['Attr' => \str_repeat('x', 2000)]));
+
+        self::assertCount(1, $this->records);
+        self::assertSame('UpsertWorkflowSearchAttributes', $this->records[0][1]['command']);
+    }
+
+    public function testSmallUpsertIsNotReported(): void
+    {
+        $this->warner()->check(new UpsertMemo(['key' => 'small']));
+
+        self::assertSame([], $this->records);
+    }
+
+    public function testChildWorkflowMemoUsesTheMemoLimit(): void
+    {
+        $request = new ExecuteChildWorkflow(
+            'ChildWorkflow',
+            EncodedValues::empty(),
+            ['Memo' => ['key' => \str_repeat('x', 2000)]],
+            Header::empty(),
+        );
+
+        // The payload limit is large enough, but the memo limit is not
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions(1024 * 1024, 1024),
+            DataConverter::createDefault(),
+            new Environment(),
+            $this->spyLogger(),
+        );
+        $warner->check($request);
+
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('memo', $this->records[0][0]);
+        self::assertSame('ExecuteChildWorkflow', $this->records[0][1]['command']);
+    }
+
+    public function testHandlerResultIsMeasured(): void
+    {
+        $this->warner()->checkValues('QueryResult', EncodedValues::fromValues([\str_repeat('x', 2000)]));
+
+        self::assertCount(1, $this->records);
+        self::assertSame('QueryResult', $this->records[0][1]['command']);
+    }
+
+    public function testReplayedHandlerResultIsNotMeasured(): void
+    {
+        $environment = new Environment();
+        $environment->update(new TickInfo(new \DateTimeImmutable(), isReplaying: true));
+
+        $warner = new PayloadSizeWarner(
+            new PayloadLimitOptions(1024, 1024),
+            $this->throwingConverter(),
+            $environment,
+            $this->spyLogger(),
+        );
+
+        $warner->checkValues('QueryResult', EncodedValues::fromValues([\str_repeat('x', 2000)]));
+
+        self::assertSame([], $this->records);
+    }
+
+    public function testThrowingLoggerDoesNotBreakTheWorkflow(): void
+    {
+        // A logger that fails must not take the Workflow down with it: the command is still sent
+        $attempts = 0;
+        $logger = new class($attempts) extends AbstractLogger {
+            public function __construct(private int &$attempts) {}
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                ++$this->attempts;
+                throw new \RuntimeException('The logging backend is down');
+            }
+        };
+
+        // The Workflow result is asserted by the run itself: a failing check would never send it
+        $this->runWorkflowWithArgument(\str_repeat('x', 2000), logger: $logger);
+
+        self::assertSame(1, $attempts, 'The warning was attempted and its failure was swallowed.');
+    }
+
     public function testWarningCanBeDisabled(): void
     {
         $this->runWorkflowWithArgument(\str_repeat('x', 2000), null);
@@ -206,8 +303,9 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         ?PayloadLimitOptions $limits = new PayloadLimitOptions(1024, 1024),
         bool $replaying = false,
         bool $enableLoggingInReplay = false,
+        ?AbstractLogger $logger = null,
     ): void {
-        $logger = $this->spyLogger();
+        $logger ??= $this->spyLogger();
 
         $options = WorkerOptions::new()
             ->withEnableLoggingInReplay($enableLoggingInReplay)

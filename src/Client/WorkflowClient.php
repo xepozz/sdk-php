@@ -25,6 +25,8 @@ use Temporal\Api\Workflowservice\V1\ListWorkflowExecutionsRequest;
 use Temporal\Client\Common\ClientContextTrait;
 use Temporal\Client\Common\Paginator;
 use Temporal\Client\GRPC\BaseClient;
+use Temporal\Common\Logger\StderrLogger;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Client\GRPC\ServiceClientInterface;
 use Temporal\Client\Update\LifecycleStage;
 use Temporal\Client\Update\UpdateHandle;
@@ -79,7 +81,8 @@ class WorkflowClient implements WorkflowClientInterface
 
     /**
      * @param null|LoggerInterface $logger Logger for client-side warnings, e.g. the payload size
-     *        warning configured by {@see ClientOptions::withPayloadLimits()}.
+     *        warning configured by {@see ClientOptions::withPayloadLimits()}. Defaults to a logger
+     *        that writes to STDERR, like the Worker does.
      */
     public function __construct(
         ServiceClientInterface $serviceClient,
@@ -124,8 +127,11 @@ class WorkflowClient implements WorkflowClientInterface
         $this->reader = new WorkflowReader($this->createReader());
 
         // Warn about oversized payloads
-        if ($logger !== null && $this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
-            $serviceClient = $serviceClient->withPayloadLimits($this->clientOptions->payloadLimits, $logger);
+        if ($serviceClient instanceof BaseClient) {
+            $serviceClient = $serviceClient->withPayloadLimits(
+                $this->clientOptions->payloadLimits ?? PayloadLimitOptions::new(),
+                $logger ?? new StderrLogger(),
+            );
         }
 
         // Set Temporal-Namespace metadata

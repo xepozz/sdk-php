@@ -83,7 +83,9 @@ final class InvokeQuery extends WorkflowProcessAwareRoute
                     $request->getTickInfo()->applyTo($info);
 
                     $result = $handler(new QueryInput($name, $request->getPayloads(), $info));
-                    $resolver->resolve(EncodedValues::fromValues([$result]));
+                    $values = EncodedValues::fromValues([$result]);
+                    $context->warnAboutPayloadSize('QueryResult', $values);
+                    $resolver->resolve($values);
                 } catch (\Throwable $e) {
                     $resolver->reject($e);
                 }

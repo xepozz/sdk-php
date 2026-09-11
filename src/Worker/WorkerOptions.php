@@ -286,6 +286,9 @@ class WorkerOptions
      * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
      * and the server rejects the oversized payload instead.
      *
+     * The validation itself is performed by RoadRunner, so the error is reported in its log, and
+     * the option has no effect on a RoadRunner build that does not support it yet.
+     *
      * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
      *
      * @experimental This API is experimental and may change in the future.
@@ -832,14 +835,17 @@ class WorkerOptions
     }
 
     /**
-     * Payload size limits at which the Workflow logs a warning.
+     * Payload size limits at which a Workflow logs a warning about the commands it produces.
      *
-     * Use {@see PayloadLimitOptions::disabled()} to turn the warnings off.
+     * The limits of the Client are configured separately, see {@see \Temporal\Client\ClientOptions::withPayloadLimits()}.
+     *
+     * @param null|PayloadLimitOptions $options NULL restores the default limits,
+     *        {@see PayloadLimitOptions::disabled()} turns the warnings off.
      *
      * @experimental This API is experimental and may change in the future.
      */
     #[Pure]
-    public function withPayloadLimits(PayloadLimitOptions $options): self
+    public function withPayloadLimits(?PayloadLimitOptions $options): self
     {
         $self = clone $this;
         $self->payloadLimits = $options;
@@ -847,13 +853,13 @@ class WorkerOptions
     }
 
     /**
-     * Payload size limits at which the Workflow logs a warning.
+     * Payload size limits at which a Workflow logs a warning about the commands it produces.
      *
      * @experimental This API is experimental and may change in the future.
      */
     public function getPayloadLimits(): PayloadLimitOptions
     {
-        return $this->payloadLimits ??= PayloadLimitOptions::new();
+        return $this->payloadLimits ?? PayloadLimitOptions::new();
     }
 
     /**

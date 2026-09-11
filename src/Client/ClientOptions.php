@@ -38,13 +38,13 @@ class ClientOptions
     public int $queryRejectionCondition = QueryRejectCondition::QUERY_REJECT_CONDITION_NONE;
 
     /**
-     * Payload size limits at which the client logs a warning. NULL disables the warnings.
+     * Payload size limits at which the client logs a warning about the requests it sends.
      *
-     * Warnings are logged only when a logger is passed to the {@see WorkflowClient}.
+     * NULL means the default limits, see {@see PayloadLimitOptions::new()}.
      *
      * @experimental This API is experimental and may change in the future.
      */
-    public ?PayloadLimitOptions $payloadLimits;
+    public ?PayloadLimitOptions $payloadLimits = null;
 
     /**
      * ClientOptions constructor.
@@ -52,13 +52,16 @@ class ClientOptions
     public function __construct()
     {
         $this->identity = \sprintf('%d@%s', (string) \getmypid(), (string) \gethostname());
-        $this->payloadLimits = new PayloadLimitOptions();
     }
 
     /**
-     * Payload size limits at which the client logs a warning.
+     * Payload size limits at which the client logs a warning about the requests it sends.
      *
-     * @param null|PayloadLimitOptions $options NULL disables the warnings.
+     * The limits of the Worker are configured separately, see
+     * {@see \Temporal\Worker\WorkerOptions::withPayloadLimits()}.
+     *
+     * @param null|PayloadLimitOptions $options NULL restores the default limits,
+     *        {@see PayloadLimitOptions::disabled()} turns the warnings off.
      *
      * @experimental This API is experimental and may change in the future.
      */

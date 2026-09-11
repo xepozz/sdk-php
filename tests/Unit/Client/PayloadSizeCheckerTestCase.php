@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LogLevel;
+use Temporal\Api\Batch\V1\BatchOperationSignal;
 use Temporal\Api\Common\V1\Memo;
 use Temporal\Api\Common\V1\Payload;
 use Temporal\Api\Common\V1\Payloads;
@@ -30,6 +31,8 @@ use Temporal\Api\Schedule\V1\ScheduleAction;
 use Temporal\Api\Update\V1\Input;
 use Temporal\Api\Update\V1\Request as UpdateRequest;
 use Temporal\Api\Workflow\V1\NewWorkflowExecutionInfo;
+use Temporal\Api\Workflow\V1\PostResetOperation;
+use Temporal\Api\Workflow\V1\PostResetOperation\SignalWorkflow;
 use Temporal\Api\Workflowservice\V1\CreateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\ExecuteMultiOperationRequest;
 use Temporal\Api\Workflowservice\V1\ExecuteMultiOperationRequest\Operation;
@@ -41,7 +44,9 @@ use Temporal\Api\Workflowservice\V1\RespondActivityTaskCanceledRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedByIdRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedByIdRequest;
+use Temporal\Api\Workflowservice\V1\ResetWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedRequest;
+use Temporal\Api\Workflowservice\V1\StartBatchOperationRequest;
 use Temporal\Api\Workflowservice\V1\SignalWithStartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\SignalWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
@@ -213,10 +218,31 @@ final class PayloadSizeCheckerTestCase extends TestCase
             ['payloads'],
         ];
 
-        yield 'CreateSchedule: schedule memo' => [
+        yield 'CreateSchedule: the memo of the action is not measured on its own' => [
             static fn() => (new CreateScheduleRequest())->setSchedule(self::schedule(0, 2000)),
             'CreateSchedule',
-            ['memo'],
+            [],
+        ];
+
+        yield 'StartBatchOperation: signal input' => [
+            static fn() => (new StartBatchOperationRequest())->setSignalOperation(
+                (new BatchOperationSignal())->setInput(self::payloads(2000)),
+            ),
+            'StartBatchOperation',
+            ['payloads'],
+        ];
+
+        yield 'ResetWorkflowExecution: post reset signal input' => [
+            static fn() => (new ResetWorkflowExecutionRequest())->setPostResetOperations([
+                (new PostResetOperation())->setSignalWorkflow(
+                    (new SignalWorkflow())->setInput(self::payloads(2000)),
+                ),
+                (new PostResetOperation())->setSignalWorkflow(
+                    (new SignalWorkflow())->setInput(self::payloads(3000)),
+                ),
+            ]),
+            'ResetWorkflowExecution',
+            ['payloads', 'payloads'],
         ];
 
         yield 'UpdateSchedule: workflow input' => [
@@ -277,16 +303,17 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertSame(['memo'], \array_column($this->logger->records, 'kind'));
     }
 
-    public function testCreateScheduleDoesNotCountTheScheduleMemoTwice(): void
+    public function testCreateScheduleDoesNotMeasureTheActionMemoOnItsOwn(): void
     {
-        // 900 bytes of schedule memo stay under the payload limit and only warn as a memo
+        // The server measures the request memo together with the workflow input and does not
+        // look at the memo of the action, so 900 bytes of it are silent even for the memo limit
         $this->check(
             (new CreateScheduleRequest())->setMemo(self::memo(100))->setSchedule(self::schedule(10, 900)),
             'CreateSchedule',
             new PayloadLimitOptions(1024, 512),
         );
 
-        self::assertSame(['memo'], \array_column($this->logger->records, 'kind'));
+        self::assertSame([], \array_column($this->logger->records, 'kind'));
     }
 
     public function testMeasuresEveryFailureOfTheChain(): void
@@ -310,7 +337,7 @@ final class PayloadSizeCheckerTestCase extends TestCase
         $this->check((new RespondActivityTaskFailedRequest())->setFailure($failure), 'RespondActivityTaskFailed');
 
         // The chain is walked up to the depth limit only
-        self::assertCount(21, $this->logger->records);
+        self::assertCount(20, $this->logger->records);
     }
 
     public function testSearchAttributesAreNotMeasured(): void

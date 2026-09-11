@@ -27,6 +27,8 @@ use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedByIdRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskCompletedRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedByIdRequest;
 use Temporal\Api\Workflowservice\V1\RespondActivityTaskFailedRequest;
+use Temporal\Api\Workflowservice\V1\ResetWorkflowExecutionRequest;
+use Temporal\Api\Workflowservice\V1\StartBatchOperationRequest;
 use Temporal\Api\Workflowservice\V1\SignalWithStartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\SignalWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
@@ -153,7 +155,18 @@ final class PayloadSizeChecker
                     self::sizeOf($request->getMemo()) + self::sizeOf($action?->getInput()),
                     $this->limits->payloadSizeWarning,
                 );
-                $this->memo($method, $action?->getMemo());
+                // Nothing nested in the request is measured again: the server has no separate
+                // check for the memo of the action, and the other SDKs do not report it either
+                return;
+
+            case $request instanceof StartBatchOperationRequest:
+                $this->payloads($method, $request->getSignalOperation()?->getInput());
+                return;
+
+            case $request instanceof ResetWorkflowExecutionRequest:
+                foreach ($request->getPostResetOperations() as $operation) {
+                    $this->payloads($method, $operation->getSignalWorkflow()?->getInput());
+                }
                 return;
 
             case $request instanceof UpdateScheduleRequest:
@@ -169,7 +182,7 @@ final class PayloadSizeChecker
      */
     private function failure(string $method, ?Failure $failure, int $depth = 0): void
     {
-        if ($failure === null || $depth > self::MAX_FAILURE_DEPTH) {
+        if ($failure === null || $depth >= self::MAX_FAILURE_DEPTH) {
             return;
         }
 

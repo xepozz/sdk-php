@@ -28,12 +28,18 @@ final class PayloadLimitOptionsTestCase extends TestCase
         self::assertTrue($options->isEnabled());
     }
 
-    public function testClientOptionsHaveLimitsByDefault(): void
+    public function testUnsetLimitsMeanTheDefaultOnes(): void
     {
-        $options = new ClientOptions();
-
-        self::assertInstanceOf(PayloadLimitOptions::class, $options->payloadLimits);
-        self::assertSame(512 * 1024, $options->payloadLimits->payloadSizeWarning);
+        // NULL is the unset state in both option objects: the default limits apply
+        self::assertNull((new ClientOptions())->payloadLimits);
+        self::assertNull((new ClientOptions())->withPayloadLimits(PayloadLimitOptions::new())->withPayloadLimits(null)->payloadLimits);
+        self::assertEquals(PayloadLimitOptions::new(), (new WorkerOptions())->getPayloadLimits());
+        self::assertEquals(
+            PayloadLimitOptions::new(),
+            (new WorkerOptions())->withPayloadLimits(PayloadLimitOptions::disabled())
+                ->withPayloadLimits(null)
+                ->getPayloadLimits(),
+        );
     }
 
     public function testWithersAreImmutable(): void
@@ -83,7 +89,7 @@ final class PayloadLimitOptionsTestCase extends TestCase
 
         self::assertNotSame($options, $result);
         self::assertSame($limits, $result->payloadLimits);
-        self::assertNotSame($limits, $options->payloadLimits);
+        self::assertNull($options->payloadLimits);
     }
 
     public function testWorkerOptionsCarryTheLimits(): void
@@ -103,9 +109,9 @@ final class PayloadLimitOptionsTestCase extends TestCase
 
     public function testClientOptionsDisableLimits(): void
     {
-        $options = (new ClientOptions())->withPayloadLimits(null);
+        $options = (new ClientOptions())->withPayloadLimits(PayloadLimitOptions::disabled());
 
-        self::assertNull($options->payloadLimits);
+        self::assertFalse($options->payloadLimits?->isEnabled());
     }
 
     /**

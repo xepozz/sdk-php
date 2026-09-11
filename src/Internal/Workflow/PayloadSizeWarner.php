@@ -12,9 +12,13 @@ declare(strict_types=1);
 namespace Temporal\Internal\Workflow;
 
 use Psr\Log\LoggerInterface;
+use Temporal\Api\Common\V1\Memo;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
+use Temporal\DataConverter\ValuesInterface;
 use Temporal\Internal\Transport\Request\ExecuteLocalActivity;
+use Temporal\Internal\Transport\Request\UpsertMemo;
+use Temporal\Internal\Transport\Request\UpsertSearchAttributes;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
 
@@ -41,45 +45,150 @@ final class PayloadSizeWarner
         private readonly LoggerInterface $logger,
     ) {}
 
+    /**
+     * Measure a command that is about to be sent to the server.
+     */
     public function check(RequestInterface $request): void
     {
-        $limit = $this->limits->payloadSizeWarning;
-        // A replayed command is not sent anywhere, so it is never measured nor reported,
-        // the same way the other SDKs check the payloads only when the request is sent.
-        if ($limit === null || $this->env->isReplaying()) {
+        $name = $request->getName();
+
+        // Local Activity arguments are not sent to the server
+        if ($name === ExecuteLocalActivity::NAME) {
             return;
         }
 
-        // Local Activity arguments are not sent to the server
-        if ($request->getName() === ExecuteLocalActivity::NAME) {
+        // A replayed command is not sent anywhere, so it is never measured nor reported,
+        // the same way the other SDKs check the payloads only when the request is sent.
+        if ($this->env->isReplaying()) {
             return;
         }
 
         try {
-            $payloads = $request->getPayloads();
-            if ($payloads->count() === 0) {
-                return;
-            }
+            $options = $request->getOptions();
 
-            $payloads->setDataConverter($this->converter);
-            // `byteSize()` is not available when the protobuf extension is used
-            $size = \strlen($payloads->toPayloads()->serializeToString());
+            // Memo and Search Attribute upserts are maps measured key by key against the payload
+            // limit, the way the server measures them
+            match ($name) {
+                UpsertMemo::NAME => $this->warn(
+                    $name,
+                    'payloads',
+                    $this->mapSize($options['memo'] ?? null),
+                    $this->limits->payloadSizeWarning,
+                ),
+                UpsertSearchAttributes::NAME => $this->warn(
+                    $name,
+                    'payloads',
+                    $this->mapSize($options['searchAttributes'] ?? null),
+                    $this->limits->payloadSizeWarning,
+                ),
+                default => null,
+            };
+
+            // A Child Workflow carries a Memo of its own, measured against the memo limit
+            $this->memo($name, $options['options']['Memo'] ?? null);
+
+            $this->payloads($name, $request->getPayloads());
         } catch (\Throwable) {
             // Measuring is an observability feature: it must not affect the Workflow in any way.
             // A value that cannot be converted fails later, in the codec, as it did before.
+        }
+    }
+
+    /**
+     * Measure the result of a Query or an Update handler that is about to be sent to the server.
+     *
+     * @param non-empty-string $command
+     */
+    public function checkValues(string $command, ValuesInterface $values): void
+    {
+        if ($this->env->isReplaying()) {
             return;
         }
 
-        if ($size <= $limit) {
+        try {
+            $this->payloads($command, $values);
+        } catch (\Throwable) {
+            // See the comment in `check()`
+        }
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private static function fieldsOf(mixed $fields): array
+    {
+        return match (true) {
+            $fields instanceof \stdClass => (array) $fields,
+            \is_array($fields) => $fields,
+            default => [],
+        };
+    }
+
+    private function payloads(string $command, ValuesInterface $values): void
+    {
+        $limit = $this->limits->payloadSizeWarning;
+        if ($limit === null || $values->count() === 0) {
+            return;
+        }
+
+        $values->setDataConverter($this->converter);
+        // `byteSize()` is not available when the protobuf extension is used
+        $this->warn($command, 'payloads', \strlen($values->toPayloads()->serializeToString()), $limit);
+    }
+
+    /**
+     * @param mixed $fields Raw values of a Memo, not converted yet.
+     */
+    private function memo(string $command, mixed $fields): void
+    {
+        $limit = $this->limits->memoSizeWarning;
+        $fields = self::fieldsOf($fields);
+        if ($limit === null || $fields === []) {
+            return;
+        }
+
+        $payloads = [];
+        foreach ($fields as $key => $value) {
+            $payloads[(string) $key] = $this->converter->toPayload($value);
+        }
+
+        $memo = (new Memo())->setFields($payloads);
+
+        $this->warn($command, 'memo', \strlen($memo->serializeToString()), $limit);
+    }
+
+    /**
+     * Size of a map of payloads: the server sums the key lengths with the sizes of the payload
+     * data, so the encoding overhead of the map itself is not counted.
+     *
+     * @param mixed $fields Raw values of the map, not converted yet.
+     */
+    private function mapSize(mixed $fields): int
+    {
+        $size = 0;
+        foreach (self::fieldsOf($fields) as $key => $value) {
+            $size += \strlen((string) $key) + \strlen($this->converter->toPayload($value)->getData());
+        }
+
+        return $size;
+    }
+
+    /**
+     * @param non-empty-string $kind
+     */
+    private function warn(string $command, string $kind, int $size, ?int $limit): void
+    {
+        if ($limit === null || $size <= $limit) {
             return;
         }
 
         $this->logger->warning(
             \sprintf(
-                '[%s] Attempted to send payloads with size that exceeded the warning limit.',
+                '[%s] Attempted to upload %s with size that exceeded the warning limit.',
                 self::MESSAGE_CODE,
+                $kind,
             ),
-            ['command' => $request->getName(), 'size' => $size, 'limit' => $limit],
+            ['command' => $command, 'size' => $size, 'limit' => $limit],
         );
     }
 }

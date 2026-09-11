@@ -90,9 +90,11 @@ final class InvokeUpdate extends WorkflowProcessAwareRoute
         $deferred = new Deferred();
         $deferred->promise()->then(
             static function (mixed $value) use ($updateId, $context): void {
+                $values = EncodedValues::fromValues([$value]);
+                $context->warnAboutPayloadSize(UpdateResponse::COMMAND_COMPLETED, $values);
                 $context->getClient()->send(new UpdateResponse(
                     command: UpdateResponse::COMMAND_COMPLETED,
-                    values: EncodedValues::fromValues([$value]),
+                    values: $values,
                     failure: null,
                     updateId: $updateId,
                 ));

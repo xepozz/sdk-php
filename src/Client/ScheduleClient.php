@@ -23,6 +23,8 @@ use Temporal\Api\Workflowservice\V1\ListSchedulesRequest;
 use Temporal\Client\Common\ClientContextTrait;
 use Temporal\Client\Common\Paginator;
 use Temporal\Client\GRPC\BaseClient;
+use Temporal\Common\Logger\StderrLogger;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Client\GRPC\ServiceClientInterface;
 use Temporal\Client\Schedule\BackfillPeriod;
 use Temporal\Client\Schedule\Info\ScheduleListEntry;
@@ -56,7 +58,8 @@ final class ScheduleClient implements ScheduleClientInterface
 
     /**
      * @param null|LoggerInterface $logger Logger for client-side warnings, e.g. the payload size
-     *        warning configured by {@see ClientOptions::withPayloadLimits()}.
+     *        warning configured by {@see ClientOptions::withPayloadLimits()}. Defaults to a logger
+     *        that writes to STDERR, like the Worker does.
      */
     public function __construct(
         ServiceClientInterface $serviceClient,
@@ -96,8 +99,11 @@ final class ScheduleClient implements ScheduleClientInterface
         $this->protoConverter = new ProtoToArrayConverter($this->converter);
 
         // Warn about oversized payloads
-        if ($logger !== null && $this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
-            $serviceClient = $serviceClient->withPayloadLimits($this->clientOptions->payloadLimits, $logger);
+        if ($serviceClient instanceof BaseClient) {
+            $serviceClient = $serviceClient->withPayloadLimits(
+                $this->clientOptions->payloadLimits ?? PayloadLimitOptions::new(),
+                $logger ?? new StderrLogger(),
+            );
         }
 
         // Set Temporal-Namespace metadata
