@@ -238,6 +238,9 @@ abstract class BaseClient implements GrpcClientInterface
             ] + $ctx->getMetadata());
         }
 
+        // Measured before the pipeline, like the Go SDK does in its outermost client interceptor
+        $this->payloadSizeChecker?->check($method, $arg);
+
         return $this->invokePipeline !== null
             ? ($this->invokePipeline)($method, $arg, $ctx)
             : $this->call($method, $arg, $ctx);
@@ -259,9 +262,6 @@ abstract class BaseClient implements GrpcClientInterface
      */
     private function call(string $method, object $arg, ContextInterface $ctx): object
     {
-        // Measure the request that is actually sent, i.e. after the interceptors
-        $this->payloadSizeChecker?->check($method, $arg);
-
         $attempt = 0;
         $retryOption = RpcRetryOptions::fromRetryOptions($ctx->getRetryOptions());
         $initialIntervalMs = $congestionInitialIntervalMs = $throttler = null;

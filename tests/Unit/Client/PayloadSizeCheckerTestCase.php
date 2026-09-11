@@ -79,7 +79,7 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertStringContainsString('memo', $this->records[0][0]);
     }
 
-    public function testSearchAttributesAreMeasuredAsKeyAndDataLength(): void
+    public function testSearchAttributesAreNotMeasured(): void
     {
         $request = (new StartWorkflowExecutionRequest())
             ->setSearchAttributes(new SearchAttributes([
@@ -88,9 +88,8 @@ final class PayloadSizeCheckerTestCase extends TestCase
 
         $this->check($request, 'StartWorkflowExecution');
 
-        self::assertCount(1, $this->records);
-        // 4 bytes of the key plus the payload data, without the protobuf overhead
-        self::assertSame(2004, $this->records[0][1]['size']);
+        // The server keeps a separate limit for them, and no other SDK reports them either
+        self::assertSame([], $this->records);
     }
 
     public function testWarnsForEveryOversizedFieldOfTheRequest(): void
@@ -118,7 +117,7 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(1, $this->records);
     }
 
-    public function testMeasuresTheWholeFailureChain(): void
+    public function testMeasuresEveryFailureOfTheChain(): void
     {
         $failure = (new Failure())->setApplicationFailureInfo(
             (new ApplicationFailureInfo())->setDetails(self::payloads(2000)),
@@ -130,8 +129,8 @@ final class PayloadSizeCheckerTestCase extends TestCase
 
         $this->check($request, 'RespondActivityTaskFailed');
 
-        self::assertCount(1, $this->records);
-        self::assertGreaterThan(4000, $this->records[0][1]['size']);
+        // Every `details` of the chain is measured on its own, as the server does
+        self::assertCount(2, $this->records);
     }
 
     public function testDisabledLimitsAreNotChecked(): void

@@ -22,6 +22,7 @@ use Temporal\Api\Workflowservice\V1\CreateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\ListSchedulesRequest;
 use Temporal\Client\Common\ClientContextTrait;
 use Temporal\Client\Common\Paginator;
+use Temporal\Client\GRPC\BaseClient;
 use Temporal\Client\GRPC\ServiceClientInterface;
 use Temporal\Client\Schedule\BackfillPeriod;
 use Temporal\Client\Schedule\Info\ScheduleListEntry;
@@ -29,6 +30,7 @@ use Temporal\Client\Schedule\Schedule;
 use Temporal\Client\Schedule\ScheduleHandle;
 use Temporal\Client\Schedule\ScheduleOptions;
 use Temporal\Common\Uuid;
+use Psr\Log\LoggerInterface;
 use Temporal\DataConverter\DataConverter;
 use Temporal\DataConverter\DataConverterInterface;
 use Temporal\Internal\Mapper\ScheduleMapper;
@@ -52,11 +54,16 @@ final class ScheduleClient implements ScheduleClientInterface
     private ProtoToArrayConverter $protoConverter;
     private PluginRegistry $pluginRegistry;
 
+    /**
+     * @param null|LoggerInterface $logger Logger for client-side warnings, e.g. the payload size
+     *        warning configured by {@see ClientOptions::withPayloadLimits()}.
+     */
     public function __construct(
         ServiceClientInterface $serviceClient,
         ?ClientOptions $options = null,
         ?DataConverterInterface $converter = null,
         ?PluginRegistry $pluginRegistry = null,
+        ?LoggerInterface $logger = null,
     ) {
         $this->clientOptions = $options ?? new ClientOptions();
         $this->converter = $converter ?? DataConverter::createDefault();
@@ -88,6 +95,11 @@ final class ScheduleClient implements ScheduleClientInterface
         );
         $this->protoConverter = new ProtoToArrayConverter($this->converter);
 
+        // Warn about oversized payloads
+        if ($logger !== null && $this->clientOptions->payloadLimits !== null && $serviceClient instanceof BaseClient) {
+            $serviceClient = $serviceClient->withPayloadLimits($this->clientOptions->payloadLimits, $logger);
+        }
+
         // Set Temporal-Namespace metadata
         $context = $serviceClient->getContext();
         $this->client = $serviceClient->withContext(
@@ -102,8 +114,9 @@ final class ScheduleClient implements ScheduleClientInterface
         ?ClientOptions $options = null,
         ?DataConverterInterface $converter = null,
         ?PluginRegistry $pluginRegistry = null,
+        ?LoggerInterface $logger = null,
     ): ScheduleClientInterface {
-        return new self($serviceClient, $options, $converter, $pluginRegistry);
+        return new self($serviceClient, $options, $converter, $pluginRegistry, $logger);
     }
 
     public function createSchedule(

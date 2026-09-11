@@ -77,27 +77,42 @@ final class PayloadLimitsTestCase extends TestCase
         self::assertSame([], $this->records);
     }
 
-    public function testInterceptorThatSkipsTheCallIsNotMeasured(): void
+    public function testWarnsWhenTheInterceptorPipelineIsInstalledFirst(): void
     {
+        // `withInterceptorPipeline()` captures a callable bound to the client it was called on,
+        // so the limits must not depend on the order the two are applied in.
         $client = $this->createClient()
-            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger())
-            ->withInterceptorPipeline(
-                Pipeline::prepare([new class implements GrpcClientInterceptor {
-                    public function interceptCall(
-                        string $method,
-                        object $arg,
-                        ContextInterface $ctx,
-                        callable $next,
-                    ): object {
-                        // The request never leaves the interceptor, so there is nothing to warn about
-                        return (object) ['method' => $method];
-                    }
-                }]),
-            );
+            ->withInterceptorPipeline(Pipeline::prepare([$this->passThroughInterceptor()]))
+            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger());
 
         $client->testCall($this->request(2000));
 
-        self::assertSame([], $this->records);
+        self::assertCount(1, $this->records);
+    }
+
+    public function testWarnsWhenTheLimitsAreInstalledFirst(): void
+    {
+        $client = $this->createClient()
+            ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger())
+            ->withInterceptorPipeline(Pipeline::prepare([$this->passThroughInterceptor()]));
+
+        $client->testCall($this->request(2000));
+
+        self::assertCount(1, $this->records);
+    }
+
+    private function passThroughInterceptor(): GrpcClientInterceptor
+    {
+        return new class implements GrpcClientInterceptor {
+            public function interceptCall(
+                string $method,
+                object $arg,
+                ContextInterface $ctx,
+                callable $next,
+            ): object {
+                return $next($method, $arg, $ctx);
+            }
+        };
     }
 
     public function testWorkflowClientEnablesWarnings(): void
