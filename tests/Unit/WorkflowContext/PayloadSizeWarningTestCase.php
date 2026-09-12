@@ -76,7 +76,12 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
             $this->spyLogger(),
         );
 
-        $warner->checkValues('QueryResult', EncodedValues::fromValues(['x']));
+        $warner->check(new ExecuteActivity(
+            'SimpleActivity.echo',
+            EncodedValues::fromValues(['x']),
+            [],
+            Header::empty(),
+        ));
 
         self::assertSame([], $this->records);
     }
@@ -250,28 +255,6 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         self::assertSame('ExecuteChildWorkflow', $this->records[0][1]['command']);
     }
 
-    public function testHandlerResultIsMeasured(): void
-    {
-        $this->warner()->checkValues('QueryResult', EncodedValues::fromValues([\str_repeat('x', 2000)]));
-
-        self::assertCount(1, $this->records);
-        self::assertSame('QueryResult', $this->records[0][1]['command']);
-    }
-
-    public function testReplayedHandlerResultIsNotMeasured(): void
-    {
-        $warner = new PayloadSizeWarner(
-            new PayloadLimitOptions(1024, 1024),
-            DataConverter::createDefault(),
-            self::replayingEnvironment(),
-            $this->spyLogger(),
-        );
-
-        $warner->checkValues('QueryResult', EncodedValues::fromValues([\str_repeat('x', 2000)]));
-
-        self::assertSame([], $this->records);
-    }
-
     public function testThrowingLoggerDoesNotBreakTheWorkflow(): void
     {
         // A logger that fails must not take the Workflow down with it: the command is still sent
@@ -290,74 +273,6 @@ final class PayloadSizeWarningTestCase extends AbstractUnit
         $this->runWorkflowWithArgument(\str_repeat('x', 2000), logger: $logger);
 
         self::assertSame(1, $attempts, 'The warning was attempted and its failure was swallowed.');
-    }
-
-    public function testQueryResultIsMeasuredByTheRouter(): void
-    {
-        $logger = $this->spyLogger();
-        $worker = $this->factory->newWorker(
-            options: WorkerOptions::new()->withPayloadLimits(new PayloadLimitOptions(1024, 1024)),
-            logger: $logger,
-        );
-        $worker->registerWorkflowObject(
-            new
-            #[Workflow\WorkflowInterface]
-            class {
-                #[WorkflowMethod(name: 'QueriedWorkflow')]
-                public function handler(): iterable
-                {
-                    return yield Workflow::await(static fn(): bool => false);
-                }
-
-                #[Workflow\QueryMethod(name: 'big')]
-                public function big(): string
-                {
-                    return \str_repeat('x', 2000);
-                }
-            }
-        );
-
-        $worker->runWorkflow('QueriedWorkflow');
-        $worker->sendQuery('QueriedWorkflow', 'big');
-        $this->factory->run($worker);
-
-        self::assertCount(1, $this->records);
-        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
-        self::assertSame('QueryResult', $this->records[0][1]['command']);
-    }
-
-    public function testUpdateResultIsMeasuredByTheRouter(): void
-    {
-        $logger = $this->spyLogger();
-        $worker = $this->factory->newWorker(
-            options: WorkerOptions::new()->withPayloadLimits(new PayloadLimitOptions(1024, 1024)),
-            logger: $logger,
-        );
-        $worker->registerWorkflowObject(
-            new
-            #[Workflow\WorkflowInterface]
-            class {
-                #[WorkflowMethod(name: 'UpdatedWorkflow')]
-                public function handler(): iterable
-                {
-                    return yield Workflow::await(static fn(): bool => false);
-                }
-
-                #[Workflow\UpdateMethod(name: 'big')]
-                public function big(): string
-                {
-                    return \str_repeat('x', 2000);
-                }
-            }
-        );
-
-        $worker->runWorkflow('UpdatedWorkflow');
-        $worker->sendUpdate('UpdatedWorkflow', 'big');
-        $this->factory->run($worker);
-
-        self::assertCount(1, $this->records);
-        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
-        self::assertSame('UpdateCompleted', $this->records[0][1]['command']);
     }
 
     public function testWarningCanBeDisabled(): void

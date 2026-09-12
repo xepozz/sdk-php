@@ -14,7 +14,6 @@ namespace Temporal\Internal\Workflow;
 use Psr\Log\LoggerInterface;
 use Temporal\Common\PayloadLimitOptions;
 use Temporal\DataConverter\DataConverterInterface;
-use Temporal\DataConverter\ValuesInterface;
 use Temporal\Internal\Support\CommandPayloads;
 use Temporal\Worker\Environment\EnvironmentInterface;
 use Temporal\Worker\Transport\Command\RequestInterface;
@@ -67,29 +66,6 @@ final class PayloadSizeWarner
         } catch (\Throwable) {
             // Measuring and reporting is an observability feature: it must not affect the Workflow
             // in any way. A value that cannot be converted fails later, in the codec, as before.
-        }
-    }
-
-    /**
-     * Measure the result of a Query or an Update handler that is about to be sent to the server.
-     *
-     * @param non-empty-string $command
-     */
-    public function checkValues(string $command, ValuesInterface $values): void
-    {
-        if ($this->env->isReplaying()) {
-            return;
-        }
-
-        try {
-            $this->warn(
-                $command,
-                'payloads',
-                CommandPayloads::valuesSize($values, $this->converter),
-                $this->limits->payloadSizeWarning,
-            );
-        } catch (\Throwable) {
-            // See the comment in `check()`
         }
     }
 

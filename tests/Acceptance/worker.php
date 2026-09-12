@@ -98,6 +98,19 @@ try {
     $container->bindSingleton(DataConverter::class, $converter);
 
     $plugins = [new TranscriptPlugin($workerTranscript)];
+    $container->bindSingleton(
+        WorkerFactoryInterface::class,
+        WorkerFactory::create(
+            converter: $converter,
+            pluginRegistry: new PluginRegistry($plugins),
+        )
+    );
+
+    $workerFactory = $container->get(\Temporal\Tests\Acceptance\App\Feature\WorkerFactory::class);
+    $getWorker = static function (Feature $feature) use (&$workers, $workerFactory): WorkerInterface {
+        return $workers[$feature->taskQueue] ??= $workerFactory->createWorker($feature);
+    };
+
     $serviceClient = $runtime->command->tlsKey === null && $runtime->command->tlsCert === null
         ? ServiceClient::create($runtime->address)
         : ServiceClient::createSSL(
@@ -108,21 +121,6 @@ try {
     $options = (new ClientOptions())->withNamespace($runtime->namespace);
     $workflowClient = WorkflowClient::create(serviceClient: $serviceClient, options: $options, converter: $converter);
     $scheduleClient = ScheduleClient::create(serviceClient: $serviceClient, options: $options, converter: $converter);
-
-    $container->bindSingleton(
-        WorkerFactoryInterface::class,
-        WorkerFactory::create(
-            converter: $converter,
-            pluginRegistry: new PluginRegistry($plugins),
-            // The Worker asks it for the payload size limits of the namespace
-            client: $workflowClient,
-        )
-    );
-
-    $workerFactory = $container->get(\Temporal\Tests\Acceptance\App\Feature\WorkerFactory::class);
-    $getWorker = static function (Feature $feature) use (&$workers, $workerFactory): WorkerInterface {
-        return $workers[$feature->taskQueue] ??= $workerFactory->createWorker($feature);
-    };
 
     $container->bindSingleton(State::class, $runtime);
     $container->bindSingleton(LoggerInterface::class, $logger);

@@ -71,7 +71,7 @@ final class PayloadLimitsTestCase extends TestCase
     {
         $client = $this->createClient()
             ->withPayloadLimits(new PayloadLimitOptions(1024, 1024), $this->createLogger())
-            ->withoutPayloadLimits();
+            ->withPayloadLimits(PayloadLimitOptions::disabled(), $this->createLogger());
 
         $client->testCall($this->request(2000));
 
@@ -174,7 +174,9 @@ final class PayloadLimitsTestCase extends TestCase
     public function testExplicitLimitsOfTheServiceClientSurviveTheClient(): void
     {
         // The Client must not override what the service client was configured with
-        $client = new WorkflowClient($this->createClient()->withoutPayloadLimits());
+        $client = new WorkflowClient(
+            $this->createClient()->withPayloadLimits(PayloadLimitOptions::disabled(), $this->createLogger()),
+        );
 
         $serviceClient = $client->getServiceClient();
         \assert(\method_exists($serviceClient, 'testCall'));

@@ -769,25 +769,6 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
         $this->currentDetails = $details;
     }
 
-    /**
-     * Warn when the result of a Query or an Update handler is larger than the configured limit.
-     *
-     * Handler results do not go through {@see self::request()}: they are sent back as responses.
-     *
-     * @param non-empty-string $command
-     *
-     * @internal
-     */
-    public function warnAboutPayloadSize(string $command, ValuesInterface $values): void
-    {
-        try {
-            $this->payloadSizeWarner()?->checkValues($command, $values);
-        } catch (\Throwable) {
-            // The result of a handler is sent from a promise handler that has nowhere to report
-            // a failure to: an Update would hang instead of completing.
-        }
-    }
-
     protected function awaitRequest(callable|Mutex|PromiseInterface ...$conditions): PromiseInterface
     {
         $result = [];
@@ -884,9 +865,7 @@ class WorkflowContext implements WorkflowContextInterface, HeaderCarrier, Destro
                 $limits,
                 $this->services->dataConverter,
                 $this->services->env,
-                // The Worker logger, not the Workflow one: a Query result is measured after the
-                // Workflow context is gone, and the Workflow logger needs one to filter replays
-                $this->services->systemLogger ?? $this->services->logger,
+                $this->services->logger,
             )
             : null;
     }

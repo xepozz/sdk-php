@@ -217,12 +217,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
                 $workerContext->getExceptionInterceptor() ?? ExceptionInterceptor::createDefault(),
                 $provider,
                 new Logger(
-                    $systemLogger = $logger ?? new StderrLogger(),
+                    $logger ?? new StderrLogger(),
                     $options->enableLoggingInReplay,
                     $taskQueue,
                 ),
                 $options->getPayloadLimits(),
-                $systemLogger,
             ),
             $this->rpc,
         );

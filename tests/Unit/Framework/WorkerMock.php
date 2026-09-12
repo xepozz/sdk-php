@@ -17,9 +17,7 @@ use Temporal\Internal\Transport\RouterInterface;
 use Temporal\Tests\Unit\Framework\Expectation\ActivityCall;
 use Temporal\Tests\Unit\Framework\Expectation\Timer;
 use Temporal\Tests\Unit\Framework\Expectation\WorkflowResult;
-use Temporal\Tests\Unit\Framework\Requests\InvokeQuery;
 use Temporal\Tests\Unit\Framework\Requests\InvokeSignal;
-use Temporal\Tests\Unit\Framework\Requests\InvokeUpdate;
 use Temporal\Tests\Unit\Framework\Requests\ReplayWorkflow;
 use Temporal\Tests\Unit\Framework\Requests\StartWorkflow;
 use Temporal\Tests\Unit\Framework\Server\CommandHandler\CommandHandlerFactory;
@@ -86,26 +84,6 @@ final class WorkerMock implements WorkerInterface, DispatcherInterface
 
         }
         $this->server->addCommand(new InvokeSignal($workflowRunId, $name, ...$args));
-    }
-
-    public function sendQuery(string $workflow, string $name, mixed ...$args): void
-    {
-        $workflowRunId = $this->execution[$workflow] ?? null;
-        if ($workflowRunId === null) {
-            throw new \LogicException("Cannot query $workflow, it is not running.");
-        }
-
-        $this->server->addCommand(new InvokeQuery($workflowRunId, $name, ...$args));
-    }
-
-    public function sendUpdate(string $workflow, string $name, mixed ...$args): void
-    {
-        $workflowRunId = $this->execution[$workflow] ?? null;
-        if ($workflowRunId === null) {
-            throw new \LogicException("Cannot update $workflow, it is not running.");
-        }
-
-        $this->server->addCommand(new InvokeUpdate($workflowRunId, $name, ...$args));
     }
 
     public function waitBatch(): ?CommandBatchMock
@@ -237,8 +215,6 @@ final class WorkerMock implements WorkerInterface, DispatcherInterface
         $router->add(new Router\InvokeActivity($this->services, Goridge::create(), $this->interceptorProvider));
         $router->add(new Router\DestroyWorkflow($this->services->running, $this->services->loop));
         $router->add(new Router\InvokeSignal($this->services->running));
-        $router->add(new Router\InvokeQuery($this->services->running, $this->services->loop));
-        $router->add(new Router\InvokeUpdate($this->services->running));
 
         return $router;
     }

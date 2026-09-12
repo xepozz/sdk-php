@@ -198,19 +198,6 @@ abstract class BaseClient implements GrpcClientInterface
     }
 
     /**
-     * Stop warning about oversized payloads.
-     *
-     * @experimental This API is experimental and may change in the future.
-     */
-    final public function withoutPayloadLimits(): static
-    {
-        $clone = clone $this;
-        $clone->payloadSizeChecker = null;
-        $clone->payloadLimitsConfigured = true;
-        return $clone;
-    }
-
-    /**
      * @param null|Pipeline<GrpcClientInterceptor, object> $pipeline
      */
     final public function withInterceptorPipeline(?Pipeline $pipeline): static
