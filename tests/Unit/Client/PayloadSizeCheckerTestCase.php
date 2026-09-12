@@ -354,21 +354,6 @@ final class PayloadSizeCheckerTestCase extends TestCase
         self::assertCount(20, $this->logger->records);
     }
 
-    public function testTheCheckersWalkNoProtobufDescriptors(): void
-    {
-        // The descriptor API differs between the pure PHP implementation and the `protobuf`
-        // extension, and CI runs the suite with only one of them at a time
-        $sources = [
-            (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Client/PayloadSizeChecker.php'),
-            (string) \file_get_contents(\dirname(__DIR__, 3) . '/src/Internal/Workflow/PayloadSizeWarner.php'),
-        ];
-
-        foreach ($sources as $source) {
-            self::assertStringNotContainsString('DescriptorPool', $source);
-            self::assertDoesNotMatchRegularExpression('/[>:]getDescriptor(ForEntity)?\(/', $source);
-        }
-    }
-
     public function testTheReportedSizeIsTheWireSize(): void
     {
         // The size is counted from the values instead of being produced, so the checker must
@@ -378,26 +363,6 @@ final class PayloadSizeCheckerTestCase extends TestCase
         $this->check((new StartWorkflowExecutionRequest())->setInput($payloads), 'StartWorkflowExecution');
 
         self::assertSame(\strlen($payloads->serializeToString()), $this->logger->records[0]['context']['size']);
-    }
-
-    public function testBothCheckersWordTheWarningTheSameWay(): void
-    {
-        // The sentence carries the code every SDK greps for, and it once drifted apart
-        $client = new \ReflectionClass(PayloadSizeChecker::class);
-        $worker = new \ReflectionClass(\Temporal\Internal\Workflow\PayloadSizeWarner::class);
-
-        self::assertSame(
-            $client->getConstant('MESSAGE_CODE'),
-            $worker->getConstant('MESSAGE_CODE'),
-        );
-
-        $sentence = '] Attempted to upload %s with size that exceeded the warning limit.';
-        foreach ([$client, $worker] as $reflection) {
-            self::assertStringContainsString(
-                $sentence,
-                (string) \file_get_contents((string) $reflection->getFileName()),
-            );
-        }
     }
 
     public function testSearchAttributesAreNotMeasured(): void

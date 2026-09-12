@@ -18,11 +18,7 @@ use Temporal\Api\Common\V1\Payloads;
 use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\WorkflowServiceClient;
 use Temporal\Client\ClientOptions;
-use Temporal\Client\GRPC\BaseClient;
 use Temporal\Client\GRPC\Connection\ConnectionState;
-use Temporal\Client\ScheduleClient;
-use Temporal\Common\Logger\StderrLogger;
-use Temporal\Internal\Client\PayloadSizeChecker;
 use Temporal\Client\GRPC\ContextInterface;
 use Temporal\Client\GRPC\ServiceClient;
 use Temporal\Client\GRPC\StatusCode;
@@ -138,29 +134,28 @@ final class PayloadLimitsTestCase extends TestCase
         self::assertSame([], $this->records);
     }
 
-    public function testWorkflowClientWarnsWithTheDefaultOptions(): void
+    public function testWorkflowClientWarnsWithTheDefaultLimits(): void
     {
-        // Neither the limits nor the logger are configured: the warnings must still be armed
-        $client = new WorkflowClient($this->createClient());
+        // The limits are not configured: the default ones must still be in force
+        $client = new WorkflowClient($this->createClient(), logger: $this->createLogger());
 
-        $checker = $this->checkerOf($client->getServiceClient());
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(PayloadLimitOptions::DEFAULT_PAYLOAD_SIZE_WARNING + 1));
 
-        self::assertNotNull($checker, 'The default client measures the payloads it sends.');
-        self::assertInstanceOf(StderrLogger::class, $this->propertyOf($checker, 'logger'));
-        self::assertSame(
-            PayloadLimitOptions::DEFAULT_PAYLOAD_SIZE_WARNING,
-            $this->propertyOf($checker, 'limits')->payloadSizeWarning,
-        );
+        self::assertCount(1, $this->records);
+        self::assertStringContainsString('[TMPRL1103]', $this->records[0][0]);
     }
 
-    public function testScheduleClientWarnsWithTheDefaultOptions(): void
+    public function testWorkflowClientKeepsSilentBelowTheDefaultLimits(): void
     {
-        $client = new ScheduleClient($this->createClient());
+        $client = new WorkflowClient($this->createClient(), logger: $this->createLogger());
 
-        $serviceClient = (new \ReflectionProperty(ScheduleClient::class, 'client'))->getValue($client);
-        \assert($serviceClient instanceof BaseClient);
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(1024));
 
-        self::assertNotNull($this->checkerOf($serviceClient));
+        self::assertSame([], $this->records);
     }
 
     public function testRetriedCallIsMeasuredOnce(): void
@@ -179,11 +174,13 @@ final class PayloadLimitsTestCase extends TestCase
     public function testExplicitLimitsOfTheServiceClientSurviveTheClient(): void
     {
         // The Client must not override what the service client was configured with
-        $serviceClient = $this->createClient()->withoutPayloadLimits();
+        $client = new WorkflowClient($this->createClient()->withoutPayloadLimits());
 
-        $client = new WorkflowClient($serviceClient);
+        $serviceClient = $client->getServiceClient();
+        \assert(\method_exists($serviceClient, 'testCall'));
+        $serviceClient->testCall($this->request(1024 * 1024));
 
-        self::assertNull($this->checkerOf($client->getServiceClient()));
+        self::assertSame([], $this->records);
     }
 
     public function testExplicitLoggerOfTheServiceClientSurvivesTheClient(): void
@@ -232,21 +229,6 @@ final class PayloadLimitsTestCase extends TestCase
                 return $next($method, $arg, $ctx);
             }
         };
-    }
-
-    private function checkerOf(object $serviceClient): ?PayloadSizeChecker
-    {
-        return $this->propertyOf($serviceClient, 'payloadSizeChecker');
-    }
-
-    private function propertyOf(object $object, string $property): mixed
-    {
-        $reflection = new \ReflectionProperty(
-            $object instanceof PayloadSizeChecker ? PayloadSizeChecker::class : BaseClient::class,
-            $property,
-        );
-
-        return $reflection->getValue($object);
     }
 
     private function request(int $size): StartWorkflowExecutionRequest

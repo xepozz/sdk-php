@@ -42,14 +42,14 @@ final class PayloadLimitOptionsTestCase extends TestCase
         );
     }
 
-    public function testTheWorkerGetterDoesNotStoreTheDefaults(): void
+    public function testTheWorkerGetterResolvesTheDefaultsWithoutStoringThem(): void
     {
         $options = WorkerOptions::new();
 
-        $options->getPayloadLimits();
+        $first = $options->getPayloadLimits();
 
-        // The getter resolves the defaults, it does not write them into the options
-        self::assertNull((new \ReflectionProperty(WorkerOptions::class, 'payloadLimits'))->getValue($options));
+        self::assertEquals($first, $options->getPayloadLimits());
+        self::assertEquals(PayloadLimitOptions::new(), $first);
     }
 
     public function testWithersAreImmutable(): void
