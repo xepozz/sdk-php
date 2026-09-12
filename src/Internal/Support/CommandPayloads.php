@@ -89,6 +89,20 @@ final class CommandPayloads
         return ['payloads' => $payloads, 'memo' => $memo];
     }
 
+    /**
+     * Size of the payloads a Worker converts itself, which is what it puts on the wire.
+     *
+     * Everything else a command carries - a memo, the Search Attributes - travels as raw values
+     * and is converted by RoadRunner, so its size can only be estimated here.
+     */
+    public static function wireSize(RequestInterface $command, DataConverterInterface $converter): int
+    {
+        // Local Activity arguments are not sent to the server
+        return $command->getName() === ExecuteLocalActivity::NAME
+            ? 0
+            : self::valuesSize($command->getPayloads(), $converter);
+    }
+
     public static function valuesSize(ValuesInterface $values, DataConverterInterface $converter): int
     {
         if ($values->count() === 0) {

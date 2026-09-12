@@ -52,6 +52,7 @@ class WorkerOptionsTestCase extends AbstractDTOMarshalling
             'MaxHeartbeatThrottleInterval' => null,
             'DisableEagerActivities' => false,
             'MaxConcurrentEagerActivityExecutionSize' => 0,
+            'DisablePayloadErrorLimit' => false,
             'DisableRegistrationAliasing' => false,
             'BuildID' => "",
             'DeploymentOptions' => null,
@@ -342,6 +343,17 @@ class WorkerOptionsTestCase extends AbstractDTOMarshalling
         // The limits configure the PHP side only
         self::assertArrayNotHasKey('PayloadLimits', $this->marshal($dto));
         self::assertArrayNotHasKey('payloadLimits', $this->marshal($dto));
+    }
+
+    public function testDisablePayloadErrorLimit(): void
+    {
+        $dto = new WorkerOptions();
+        $result = $dto->withDisablePayloadErrorLimit();
+
+        self::assertNotSame($dto, $result);
+        self::assertFalse($dto->disablePayloadErrorLimit);
+        self::assertTrue($result->disablePayloadErrorLimit);
+        self::assertTrue($this->marshal($result)['DisablePayloadErrorLimit']);
     }
 
     public function testDisableRegistrationAliasing(): void
