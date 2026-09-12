@@ -97,7 +97,7 @@ final class CommandPayloads
 
         $values->setDataConverter($converter);
 
-        return \strlen($values->toPayloads()->serializeToString());
+        return MessageSize::ofPayloads($values->toPayloads());
     }
 
     /**
@@ -115,7 +115,7 @@ final class CommandPayloads
             $payloads[(string) $key] = $converter->toPayload($value);
         }
 
-        return \strlen((new Memo())->setFields($payloads)->serializeToString());
+        return MessageSize::ofMemo((new Memo())->setFields($payloads));
     }
 
     /**

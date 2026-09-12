@@ -34,8 +34,8 @@ use Temporal\Api\Workflowservice\V1\StartWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\TerminateWorkflowExecutionRequest;
 use Temporal\Api\Workflowservice\V1\UpdateScheduleRequest;
 use Temporal\Api\Workflowservice\V1\UpdateWorkflowExecutionRequest;
-use Google\Protobuf\Internal\Message;
 use Temporal\Common\PayloadLimitOptions;
+use Temporal\Internal\Support\MessageSize;
 
 /**
  * Warns when an outgoing gRPC request carries payloads larger than the configured limits.
@@ -82,14 +82,6 @@ final class PayloadSizeChecker
         } catch (\Throwable) {
             // Measuring is an observability feature: it must never break the RPC call
         }
-    }
-
-    /**
-     * Size of a message as the server sees it on the wire.
-     */
-    private static function sizeOf(?Message $message): int
-    {
-        return $message === null ? 0 : \strlen($message->serializeToString());
     }
 
     private function inspect(string $method, object $request): void
@@ -158,7 +150,7 @@ final class PayloadSizeChecker
                 $this->warn(
                     $method,
                     'payloads',
-                    self::sizeOf($request->getMemo()) + self::sizeOf($action->getInput()),
+                    MessageSize::ofMemo($request->getMemo()) + MessageSize::ofPayloads($action->getInput()),
                     $this->limits->payloadSizeWarning,
                 );
                 // Nothing nested in the request is measured again: the server has no separate
@@ -202,12 +194,12 @@ final class PayloadSizeChecker
 
     private function payloads(string $method, ?Payloads $payloads): void
     {
-        $this->warn($method, 'payloads', self::sizeOf($payloads), $this->limits->payloadSizeWarning);
+        $this->warn($method, 'payloads', MessageSize::ofPayloads($payloads), $this->limits->payloadSizeWarning);
     }
 
     private function memo(string $method, ?Memo $memo): void
     {
-        $this->warn($method, 'memo', self::sizeOf($memo), $this->limits->memoSizeWarning);
+        $this->warn($method, 'memo', MessageSize::ofMemo($memo), $this->limits->memoSizeWarning);
     }
 
     /**
