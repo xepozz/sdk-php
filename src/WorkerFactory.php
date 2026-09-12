@@ -46,12 +46,15 @@ use Temporal\Internal\Transport\Client;
 use Temporal\Internal\Transport\ClientInterface;
 use Temporal\Internal\Transport\Router;
 use Temporal\Internal\Transport\RouterInterface;
+use Temporal\Exception\PayloadSizeExceededException;
+use Temporal\Internal\Transport\PayloadSizeLimiter;
+use Temporal\Worker\Transport\Command\CommandInterface;
 use Temporal\Internal\Transport\Server;
 use Temporal\Internal\Transport\ServerInterface;
 use Temporal\Internal\Workflow\Logger;
 use Temporal\Worker\Environment\Environment;
 use Temporal\Worker\Environment\EnvironmentInterface;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 use Temporal\Worker\LoopInterface;
 use Temporal\Worker\ServiceCredentials;
 use Temporal\Worker\Transport\Codec\CodecInterface;
@@ -114,6 +117,16 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
     protected EnvironmentInterface $env;
     protected PluginRegistry $pluginRegistry;
 
+    /**
+     * The Client the namespace limits are asked for.
+     */
+    private ?WorkflowClient $workflowClient;
+
+    /**
+     * NULL until the Worker starts, and when the namespace enforces no limits.
+     */
+    private ?PayloadSizeLimiter $payloadSizeLimiter = null;
+
     public function __construct(
         DataConverterInterface $dataConverter,
         protected RPCConnectionInterface $rpc,
@@ -121,6 +134,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         ?PluginRegistry $pluginRegistry = null,
         ?WorkflowClient $client = null,
     ) {
+        $this->workflowClient = $client;
         $this->pluginRegistry = new PluginRegistry();
         // Propagate worker plugins from the client first
         if ($client !== null) {
@@ -146,6 +160,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $this->boot($credentials ?? ServiceCredentials::create());
     }
 
+    /**
+     * @param null|WorkflowClient $client The Client a Worker asks for the payload size limits its
+     *        namespace enforces. Without one a Worker enforces no limit of its own and an
+     *        oversized payload is rejected by the server instead.
+     */
     public static function create(
         ?DataConverterInterface $converter = null,
         ?RPCConnectionInterface $rpc = null,
@@ -202,6 +221,7 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
                     $options->enableLoggingInReplay,
                     $taskQueue,
                 ),
+                $options->getPayloadLimits(),
             ),
             $this->rpc,
         );
@@ -260,6 +280,8 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
 
         $plugins = $this->pluginRegistry->getPlugins(WorkerPluginInterface::class);
         $pipeline = Pipeline::prepare($plugins);
+
+        $this->payloadSizeLimiter = $this->createPayloadSizeLimiter();
 
         return $pipeline->with(function () use ($host): int {
             while ($msg = $host->waitBatch()) {
@@ -338,6 +360,19 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         return new Marshaller(new AttributeMapperFactory($reader));
     }
 
+    /**
+     * Ask the namespace for the limits it enforces, once the Worker starts.
+     *
+     * The lookup is an RPC, so it is bounded and never fatal: without it the Worker sends what it
+     * produces and the server rejects what it must.
+     */
+    protected function createPayloadSizeLimiter(): ?PayloadSizeLimiter
+    {
+        return $this->workflowClient === null
+            ? null
+            : PayloadSizeLimiter::fromClient($this->workflowClient, $this->converter);
+    }
+
     private function boot(ServiceCredentials $credentials): void
     {
         $this->reader = $this->createReader();
@@ -369,8 +404,11 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
         $commands = $this->codec->decode($messages, $headers);
 
 
+        $replaying = false;
+
         foreach ($commands as $command) {
             $this->env->update($command->getTickInfo());
+            $replaying = $replaying || $command->getTickInfo()->isReplaying;
 
             if ($command instanceof ServerResponseInterface) {
                 $this->client->dispatch($command);
@@ -382,7 +420,32 @@ class WorkerFactory implements WorkerFactoryInterface, LoopInterface
 
         $this->tick();
 
-        return $this->codec->encode($this->responses);
+        return $this->codec->encode($this->limitPayloads($this->responses, $headers, $replaying));
+    }
+
+    /**
+     * Measure the commands the Worker is about to send, so payloads the server is known to reject
+     * fail the Workflow Task instead of being uploaded.
+     *
+     * @param iterable<CommandInterface> $commands
+     * @return iterable<CommandInterface>
+     *
+     * @throws PayloadSizeExceededException
+     */
+    private function limitPayloads(iterable $commands, array $headers, bool $replaying): iterable
+    {
+        if ($this->payloadSizeLimiter === null) {
+            return $commands;
+        }
+
+        $taskQueue = $headers[self::HEADER_TASK_QUEUE] ?? null;
+        $worker = \is_string($taskQueue) ? $this->queues->find($taskQueue) : null;
+
+        // Only what a Worker produces is measured: a batch of no Worker, such as the registration
+        // handshake, never reaches the server. A Worker may also leave the enforcement to RoadRunner.
+        return $worker === null || $worker->getOptions()->disablePayloadErrorLimit
+            ? $commands
+            : $this->payloadSizeLimiter->enforce($commands, $replaying);
     }
 
     private function onRequest(ServerRequestInterface $request, array $headers): PromiseInterface

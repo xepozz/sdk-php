@@ -27,7 +27,7 @@ use Temporal\Testing\Transcript\TranscriptSection;
 use Temporal\Testing\Transcript\TranscriptStore;
 use Temporal\Testing\Transcript\TranscriptWriter;
 use Temporal\Testing\Transcript\WorkflowHistoryDumper;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 use Temporal\Tests\Acceptance\App\Runtime\ContainerFacade;
 use Temporal\Tests\Acceptance\App\Runtime\Feature;
 use Temporal\Tests\Acceptance\App\Runtime\RRStarter;

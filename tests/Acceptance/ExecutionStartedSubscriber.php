@@ -35,7 +35,7 @@ use Temporal\Tests\Acceptance\App\Runtime\State;
 use Temporal\Tests\Acceptance\App\Runtime\TemporalStarter;
 use Temporal\Tests\Acceptance\App\RuntimeBuilder;
 use Temporal\Tests\Acceptance\App\Support;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 
 final class ExecutionStartedSubscriber implements ExecutionStartedSubscriberInterface
 {

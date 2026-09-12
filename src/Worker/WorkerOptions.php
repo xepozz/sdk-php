@@ -13,6 +13,7 @@ namespace Temporal\Worker;
 
 use JetBrains\PhpStorm\Pure;
 use Temporal\Activity\ActivityOptions;
+use Temporal\Common\PayloadLimitOptions;
 use Temporal\Internal\Marshaller\Meta\Marshal;
 use Temporal\Internal\Marshaller\Type\DateIntervalType;
 use Temporal\Internal\Marshaller\Type\EnumValueType;
@@ -279,6 +280,30 @@ class WorkerOptions
     public int $maxConcurrentEagerActivityExecutionSize = 0;
 
     /**
+     * Optional: Disable payload size error limit enforcement in the worker.
+     *
+     * When FALSE, the worker validates the payload size before submitting it to the Temporal
+     * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
+     * and the server rejects the oversized payload instead.
+     *
+     * The limits are the ones the namespace reports, so the SDK enforces them only when a
+     * {@see \Temporal\Client\WorkflowClient} is given to the Worker factory to ask with, and only
+     * for the payloads of the commands a Workflow produces. Everything else, a memo and the
+     * Search Attributes among it, is converted and sent by RoadRunner, which enforces its own.
+     *
+     * This option turns the check off in both: it is also sent to RoadRunner, where it has no
+     * effect on a build that does not support it yet. When the check does trip, the Workflow Task
+     * fails with a `[TMPRL1103]` error and the server retries it: the Workflow keeps its history
+     * and carries on once the payload it produces fits.
+     *
+     * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Marshal(name: 'DisablePayloadErrorLimit')]
+    public bool $disablePayloadErrorLimit = false;
+
+    /**
      * Optional: Disable allowing workflow and activity functions that are
      * registered with custom names from being able to be called with their
      * function references.
@@ -321,6 +346,16 @@ class WorkerOptions
      */
     #[Marshal(name: 'DeploymentOptions')]
     public WorkerDeploymentOptions $deploymentOptions;
+
+    /**
+     * Payload size limits at which the Workflow logs a warning; NULL means the defaults.
+     *
+     * The property is private because it configures the PHP side only and must never be sent
+     * to the RoadRunner worker: only public properties are marshalled.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    private ?PayloadLimitOptions $payloadLimits = null;
 
     #[Pure]
     public static function new(): self
@@ -785,6 +820,55 @@ class WorkerOptions
         $self = clone $this;
         $self->maxConcurrentEagerActivityExecutionSize = $size;
         return $self;
+    }
+
+    /**
+     * Optional: Disable payload size error limit enforcement in the worker.
+     *
+     * When FALSE, the worker validates the payload size before submitting it to the Temporal
+     * server, and fails the task when the limit is exceeded. When TRUE, the validation is skipped
+     * and the server rejects the oversized payload instead.
+     *
+     * @see self::$disablePayloadErrorLimit for what the SDK enforces and what RoadRunner does.
+     *
+     * @link https://docs.temporal.io/troubleshooting/blob-size-limit-error
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Pure]
+    public function withDisablePayloadErrorLimit(bool $disable = true): self
+    {
+        $self = clone $this;
+        $self->disablePayloadErrorLimit = $disable;
+        return $self;
+    }
+
+    /**
+     * Payload size limits at which a Workflow logs a warning about the commands it produces.
+     *
+     * The limits of the Client are configured separately, see {@see \Temporal\Client\ClientOptions::withPayloadLimits()}.
+     *
+     * @param null|PayloadLimitOptions $options NULL restores the default limits,
+     *        {@see PayloadLimitOptions::disabled()} turns the warnings off.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    #[Pure]
+    public function withPayloadLimits(?PayloadLimitOptions $options): self
+    {
+        $self = clone $this;
+        $self->payloadLimits = $options;
+        return $self;
+    }
+
+    /**
+     * Payload size limits at which a Workflow logs a warning about the commands it produces.
+     *
+     * @experimental This API is experimental and may change in the future.
+     */
+    public function getPayloadLimits(): PayloadLimitOptions
+    {
+        return $this->payloadLimits ?? PayloadLimitOptions::new();
     }
 
     /**

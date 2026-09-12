@@ -12,7 +12,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
 use Temporal\Testing\Transcript\TranscriptStore;
-use Temporal\Worker\Logger\StderrLogger;
+use Temporal\Common\Logger\StderrLogger;
 
 $stderr = new StderrLogger();
 $store = TranscriptStore::create(stderr: $stderr);
